@@ -83,16 +83,16 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbyQcF-Tv0c23ZfXAfc60MUci5Dbif5t9i8JEQ8sKQo_mfnyjfuWSYLGW_tmAEEWGRobTw/exec"; 
+        const DEFAULT_CLOUD_SYNC_URL = ""; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v7',
-            TEACHERS: 'happyhome_quiz_teachers_v7',
-            QUESTIONS: 'happyhome_quiz_questions_v7',
-            ATTEMPTS: 'happyhome_quiz_attempts_v7',
-            CURRENT_USER: 'happyhome_quiz_current_user_v7',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v7',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v7'
+            SETTINGS: 'happyhome_quiz_settings_v8',
+            TEACHERS: 'happyhome_quiz_teachers_v8',
+            QUESTIONS: 'happyhome_quiz_questions_v8',
+            ATTEMPTS: 'happyhome_quiz_attempts_v8',
+            CURRENT_USER: 'happyhome_quiz_current_user_v8',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v8',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v8'
         };
 
         const TABLE_KEY_MAP = {
@@ -102,7 +102,11 @@
             ATTEMPTS: DB_KEYS.ATTEMPTS
         };
 
-        const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
+        const HAPPY_CLASSES = [
+            'AGRIC', 'ARTS 1', 'ARTS 2A', 'ARTS 2B', 'ARTS 3', 'ARTS 4', 
+            'BUS', 'LANG', 'H/E 1A', 'H/E 1B', 'H/E 2A', 'H/E 2B', 
+            'SCI', 'V/A 1', 'V/A 2'
+        ];
         const HAPPY_SUBJECTS = ['English Language', 'Mathematics', 'Science', 'R.M.E.', 'Social Studies'];
 
         let activeQuizState = {
@@ -264,14 +268,14 @@
 
             if (!localStorage.getItem(DB_KEYS.TEACHERS)) {
                 const sampleTeachers = [
-                    { id: 'TCH-101', name: 'Madam Akosua Owusu', username: 'akosua', pass: 'teacher123', role: 'teacher', assignedClasses: ['Basic 5', 'Basic 6', 'JHS 1'] }
+                    { id: 'TCH-101', name: 'Madam Akosua Owusu', username: 'akosua', pass: 'teacher123', role: 'teacher', assignedClasses: ['AGRIC', 'SCI', 'BUS'] }
                 ];
                 localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify(sampleTeachers));
             }
 
             if (!localStorage.getItem(DB_KEYS.QUESTIONS)) {
                 const sampleQuestions = [
-                    { id: 1, class: 'Basic 6', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 }
+                    { id: 1, class: 'SCI', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 }
                 ];
                 localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify(sampleQuestions));
             }
@@ -606,11 +610,11 @@
                         <form id="teacherLoginForm" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Username / Staff ID</label>
-                                <input type="text" id="teacherUsernameInput" required value="admin" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                <input type="text" id="teacherUsernameInput" required placeholder="Enter username" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Password</label>
-                                <input type="password" id="teacherPasswordInput" required value="admin123" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                <input type="password" id="teacherPasswordInput" required placeholder="Enter password" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
                             </div>
                             <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Secure Login</button>
                         </form>
