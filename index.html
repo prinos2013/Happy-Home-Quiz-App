@@ -6,7 +6,6 @@
     <title>HAPPY HOME Preparatory School - Quiz App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6A0DAD">
@@ -15,7 +14,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#6A0DAD', // Purple
+                        primary: '#6A0DAD',
                         secondary: '#4f46e5',
                         accent: '#059669',
                     }
@@ -29,6 +28,12 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        @media print {
+            body * { visibility: hidden; }
+            #resultInterface, #resultInterface * { visibility: visible; }
+            #resultInterface { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
@@ -78,26 +83,21 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // ====================================================================
-        // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW FOR GLOBAL SYNC:
-        // ====================================================================
-        const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbx2_zCy_rbtCCXfMzvHI6CmJ2r1Hl60Hd623XwjmLBe7tkMcZi2M0VFoV6lGdjY3WHU/exec"; 
+        const DEFAULT_CLOUD_SYNC_URL = ""; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v1',
-            TEACHERS: 'happyhome_quiz_teachers_v1',
-            STUDENTS: 'happyhome_quiz_students_v1',
-            QUESTIONS: 'happyhome_quiz_questions_v1',
-            ATTEMPTS: 'happyhome_quiz_attempts_v1',
-            CURRENT_USER: 'happyhome_quiz_current_user_v1',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v1',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v1'
+            SETTINGS: 'happyhome_quiz_settings_v7',
+            TEACHERS: 'happyhome_quiz_teachers_v7',
+            QUESTIONS: 'happyhome_quiz_questions_v7',
+            ATTEMPTS: 'happyhome_quiz_attempts_v7',
+            CURRENT_USER: 'happyhome_quiz_current_user_v7',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v7',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v7'
         };
 
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
-            STUDENTS: DB_KEYS.STUDENTS,
             QUESTIONS: DB_KEYS.QUESTIONS,
             ATTEMPTS: DB_KEYS.ATTEMPTS
         };
@@ -115,7 +115,6 @@
             classGroup: ''
         };
 
-        // --- TWO-WAY GOOGLE SHEETS CLOUD SYNC ENGINE ---
         function getCloudSyncUrl() {
             const s = getSettings();
             return (s.cloudSyncUrl && s.cloudSyncUrl.trim() !== '') 
@@ -270,17 +269,9 @@
                 localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify(sampleTeachers));
             }
 
-            if (!localStorage.getItem(DB_KEYS.STUDENTS)) {
-                const sampleStudents = [
-                    { id: 'STU-1', name: 'Elizabeth Ayeyi Appiah', classGroup: 'Basic 6' }
-                ];
-                localStorage.setItem(DB_KEYS.STUDENTS, JSON.stringify(sampleStudents));
-            }
-
             if (!localStorage.getItem(DB_KEYS.QUESTIONS)) {
                 const sampleQuestions = [
-                    { id: 1, class: 'Basic 6', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 },
-                    { id: 2, class: 'Basic 6', subject: 'English Language', text: 'Choose the correct plural form of "Child":', optA: 'Childs', optB: 'Children', optC: 'Childrens', optD: 'Childes', correct: 'B', timer: 5 }
+                    { id: 1, class: 'Basic 6', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 }
                 ];
                 localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify(sampleQuestions));
             }
@@ -393,13 +384,13 @@
                         <form id="startTestForm" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Full Name</label>
-                                <input type="text" id="studentName" required value="Elizabeth Ayeyi Appiah" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                <input type="text" id="studentName" required placeholder="e.g. Elizabeth Ayeyi Appiah" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Select Class</label>
                                 <select id="studentClass" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
                                     <option value="">-- Choose Class --</option>
-                                    ${HAPPY_CLASSES.map(c => `<option value="${c}" ${c === 'Basic 6' ? 'selected' : ''}>${c}</option>`).join('')}
+                                    ${HAPPY_CLASSES.map(c => `<option value="${c}">${c}</option>`).join('')}
                                 </select>
                             </div>
                             <div>
@@ -588,6 +579,8 @@
         // --- STAFF / ADMIN PORTAL VIEW ---
         function getStaffPortalHTML(currentUser) {
             const s = getSettings();
+            const isAdmin = currentUser && currentUser.role === 'admin';
+
             return `
                 <header class="bg-primary text-white shadow-md">
                     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -636,8 +629,8 @@
                         <!-- Navigation Tabs -->
                         <div class="flex flex-wrap gap-2 border-b pb-2">
                             <button onclick="switchStaffTab('questions')" id="tabQBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition">Question Bank & AI</button>
-                            <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition ${currentUser && currentUser.role === 'admin' ? '' : 'hidden'}">Manage Teachers</button>
-                            <button onclick="switchStaffTab('settings')" id="tabSBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Change Password / Cloud</button>
+                            <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition ${isAdmin ? '' : 'hidden'}">Manage Teachers</button>
+                            <button onclick="switchStaffTab('settings')" id="tabSBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Change Password</button>
                         </div>
 
                         <!-- Tab 1: Question Bank & AI Uploader -->
@@ -724,7 +717,7 @@
                         </div>
 
                         <!-- Tab 2: Manage Teachers (Admin Only) -->
-                        <div id="staffTabTeachers" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                        <div id="staffTabTeachers" class="${isAdmin ? '' : 'hidden'} bg-white p-6 rounded-xl shadow-sm border space-y-4">
                             <h4 class="font-bold text-md text-primary">Create Teachers & Assign One or More Classes (Admin Only)</h4>
                             <form id="createTeacherForm" class="space-y-4 border-b pb-6">
                                 <div>
@@ -753,7 +746,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab 3: Security Settings (Change Password & Cloud URL) -->
+                        <!-- Tab 3: Security Settings (Change Password) -->
                         <div id="staffTabSettings" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-6 max-w-lg">
                             <div>
                                 <h4 class="font-bold text-md text-primary mb-3">Change Your Password</h4>
@@ -774,18 +767,20 @@
                                 </form>
                             </div>
 
-                            <div class="border-t pt-4">
-                                <h4 class="font-bold text-md text-primary mb-2"><i class="fas fa-cloud mr-1"></i>Google Sheets Cloud Sync URL</h4>
-                                <p class="text-xs text-slate-500 mb-3">Paste your deployed Google Apps Script Web App URL below so all devices sync instantly.</p>
-                                <div class="space-y-3">
-                                    <input type="url" id="settingCloudUrl" value="${getCloudSyncUrl()}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 border rounded-lg text-xs font-mono">
-                                    <div class="flex gap-2">
-                                        <button type="button" onclick="saveCloudUrlSetting()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Save Cloud URL</button>
-                                        <button type="button" onclick="pushAllTablesToCloud(true)" class="py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Push Data</button>
-                                        <button type="button" onclick="pullFromCloud(true)" class="py-2 px-3 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Pull Data</button>
+                            ${isAdmin ? `
+                                <div class="border-t pt-4">
+                                    <h4 class="font-bold text-md text-primary mb-2"><i class="fas fa-cloud mr-1"></i>Google Sheets Cloud Sync URL</h4>
+                                    <p class="text-xs text-slate-500 mb-3">Paste your deployed Google Apps Script Web App URL below so all devices sync instantly.</p>
+                                    <div class="space-y-3">
+                                        <input type="url" id="settingCloudUrl" value="${getCloudSyncUrl()}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 border rounded-lg text-xs font-mono">
+                                        <div class="flex gap-2">
+                                            <button type="button" onclick="saveCloudUrlSetting()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Save Cloud URL</button>
+                                            <button type="button" onclick="pushAllTablesToCloud(true)" class="py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Push Data</button>
+                                            <button type="button" onclick="pullFromCloud(true)" class="py-2 px-3 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Pull Data</button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </main>
