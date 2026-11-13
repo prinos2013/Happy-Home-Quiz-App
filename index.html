@@ -5,443 +5,527 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAPPY HOME Preparatory School - Quiz App</title>
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6A0DAD">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .bg-primary { background-color: #6A0DAD; }
-        .text-primary { color: #6A0DAD; }
-        .border-primary { border-color: #6A0DAD; }
-        @media print {
-            body * { visibility: hidden; }
-            #resultInterface, #resultInterface * { visibility: visible; }
-            #resultInterface { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
-            .no-print { display: none !important; }
-        }
-    </style>
-</head>
-<body class="bg-gray-50 min-h-screen flex flex-col justify-between text-gray-800">
-
-    <!-- Header -->
-    <header class="bg-primary text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <!-- LOGO: Replace 'logo.png' with your actual logo filename -->
-                <img id="schoolLogo" src="logo.png" alt="School Logo" class="w-10 h-10 object-contain bg-white rounded-full p-1" onerror="this.src='https://via.placeholder.com/40?text=HH'">
-                <div>
-                    <h1 class="font-bold text-sm sm:text-base leading-tight">HAPPY HOME Prep. School, Assin Amoabin</h1>
-                    <p class="text-[11px] text-purple-200 italic">Motto: Perseverance Endures</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <span id="networkBadge" class="text-[10px] px-2 py-1 bg-green-500 text-white rounded-full font-bold">Online</span>
-                <button onclick="switchPortal('student')" id="navStudentBtn" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Student Portal</button>
-                <button onclick="switchPortal('teacher')" id="navTeacherBtn" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Teacher/Admin</button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4">
-
-        <!-- ================= STUDENT PORTAL ================= -->
-        <div id="studentPortal" class="space-y-6">
-            <!-- Step 1: Student Login / Details Form -->
-            <div id="studentLoginForm" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-lg mx-auto">
-                <h2 class="text-xl font-bold text-primary mb-1">Student Examination Portal</h2>
-                <p class="text-xs text-gray-500 mb-6">Select your class and subject to begin your quiz.</p>
-                
-                <form id="startTestForm" onsubmit="handleStudentStart(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Full Name</label>
-                        <input type="text" id="studentName" required placeholder="e.g. Ama Serwaa" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Select Class</label>
-                        <select id="studentClass" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                            <option value="">-- Choose Class --</option>
-                            <option value="Basic 1">Basic 1</option>
-                            <option value="Basic 2">Basic 2</option>
-                            <option value="Basic 3">Basic 3</option>
-                            <option value="Basic 4">Basic 4</option>
-                            <option value="Basic 5">Basic 5</option>
-                            <option value="Basic 6">Basic 6</option>
-                            <option value="JHS 1">JHS 1</option>
-                            <option value="JHS 2">JHS 2</option>
-                            <option value="JHS 3">JHS 3</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Select Subject</label>
-                        <select id="studentSubject" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                            <option value="">-- Choose Subject --</option>
-                            <option value="English Language">English Language</option>
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Science">Science</option>
-                            <option value="R.M.E.">R.M.E.</option>
-                            <option value="Social Studies">Social Studies (JHS Only)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Start Quiz Assessment</button>
-                </form>
-            </div>
-
-            <!-- Step 2: Active Exam Interface with Timer -->
-            <div id="examInterface" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center border-b pb-4 mb-4">
-                    <div>
-                        <h3 id="examTitleDisplay" class="font-bold text-lg text-primary">Subject Assessment</h3>
-                        <p id="studentInfoDisplay" class="text-xs text-gray-500">Student Name | Class</p>
-                    </div>
-                    <div id="timerDisplay" class="bg-red-50 text-red-600 font-bold px-3 py-1.5 rounded-lg border border-red-200 text-sm">
-                        Time Left: <span id="timeCount">00:00</span>
-                    </div>
-                </div>
-
-                <div id="questionContainer" class="space-y-6">
-                    <!-- Dynamic Questions injected here -->
-                </div>
-
-                <div class="mt-8 flex justify-end">
-                    <button onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
-                </div>
-            </div>
-
-            <!-- Step 3: Immediate Performance Result Display -->
-            <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-5 relative overflow-hidden">
-                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800"></div>
-                
-                <div>
-                    <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">HAPPY HOME Preparatory School, Assin Amoabin</h4>
-                    <p class="text-[10px] text-gray-400 italic">Motto: Perseverance Endures</p>
-                    <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">ASSESSMENT REPORT</h2>
-                    <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
-                    <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
-                </div>
-
-                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-2">
-                    <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Performance Feedback</p>
-                    <p id="certScoreText" class="text-3xl font-black text-primary">0 / 0</p>
-                    <p id="certPercentageText" class="text-sm font-bold text-gray-700">0%</p>
-                    <div id="certFeedbackBox" class="p-3 bg-white text-purple-900 rounded-lg text-xs font-semibold shadow-sm border border-purple-200 text-left">
-                        Assessment performance description goes here...
-                    </div>
-                </div>
-
-                <div class="pt-2 flex flex-col sm:flex-row gap-2 no-print">
-                    <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
-                        <i class="fas fa-print"></i><span>Print Results</span>
-                    </button>
-                    <button onclick="resetStudentSession()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition text-xs">
-                        Back to Home
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= TEACHER & ADMIN PORTAL ================= -->
-        <div id="teacherPortal" class="hidden space-y-6">
-            <!-- Login Card -->
-            <div id="teacherLoginCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-md mx-auto">
-                <h2 class="text-xl font-bold text-primary mb-2">Teacher & Admin Portal</h2>
-                <p class="text-sm text-gray-500 mb-6">Log in with your assigned staff credentials.</p>
-                <form onsubmit="handleTeacherLogin(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Username / Staff ID</label>
-                        <input type="text" id="teacherUsernameInput" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Password</label>
-                        <input type="password" id="teacherPasswordInput" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                    </div>
-                    <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Secure Login</button>
-                </form>
-            </div>
-
-            <!-- Dashboard Content -->
-            <div id="teacherDashboard" class="hidden space-y-6">
-                <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
-                    <div>
-                        <h3 id="welcomeStaffText" class="font-bold text-lg text-primary">Welcome Staff</h3>
-                        <p class="text-xs text-gray-500">Manage question banks, AI generators, teachers, and security settings.</p>
-                    </div>
-                    <button onclick="handleTeacherLogout()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition">Logout</button>
-                </div>
-
-                <!-- Navigation Tabs -->
-                <div class="flex flex-wrap gap-2 border-b pb-2">
-                    <button onclick="switchStaffTab('questions')" id="tabQBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition">Question Bank & AI</button>
-                    <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Manage Teachers</button>
-                    <button onclick="switchStaffTab('settings')" id="tabSBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Change Password</button>
-                </div>
-
-                <!-- Tab 1: Question Bank & AI Uploader -->
-                <div id="staffTabQuestions" class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
-                    <div class="border-b pb-4">
-                        <h4 class="font-bold text-md text-primary">Upload / Generate Questions (AI & Material Import)</h4>
-                        <p class="text-xs text-gray-500 mt-1">Upload files (PDF, Word docs) or copy/paste raw text to create quiz questions.</p>
-                    </div>
-
-                    <!-- AI & Document Question Importer Box -->
-                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-3">
-                        <h4 class="font-bold text-xs text-purple-900 uppercase flex items-center space-x-2">
-                            <i class="fas fa-magic text-purple-600"></i>
-                            <span>AI / Document Question Importer (PDF, .doc, Copy & Paste)</span>
-                        </h4>
-                        <p class="text-xs text-slate-600">Upload a study material file or paste raw text below to auto-extract questions.</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload Document (.txt, .doc, .pdf)</label>
-                                <input type="file" id="ai-doc-file" accept=".txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
-                            </div>
-                            <div class="flex items-end">
-                                <button type="button" onclick="parseTextIntoQuestions()" class="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">
-                                    <i class="fas fa-robot mr-1"></i> Auto-Generate Questions from Text
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / Study Material Content</label>
-                            <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or study notes here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
-                        </div>
-                    </div>
-
-                    <form onsubmit="handleSaveQuestion(event)" class="space-y-4 pt-2">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Target Class</label>
-                                <select id="qClass" required class="w-full p-2.5 border rounded-lg">
-                                    <option value="Basic 1">Basic 1</option><option value="Basic 2">Basic 2</option><option value="Basic 3">Basic 3</option>
-                                    <option value="Basic 4">Basic 4</option><option value="Basic 5">Basic 5</option><option value="Basic 6">Basic 6</option>
-                                    <option value="JHS 1">JHS 1</option><option value="JHS 2">JHS 2</option><option value="JHS 3">JHS 3</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Subject</label>
-                                <select id="qSubject" required class="w-full p-2.5 border rounded-lg">
-                                    <option value="English Language">English Language</option>
-                                    <option value="Mathematics">Mathematics</option>
-                                    <option value="Science">Science</option>
-                                    <option value="R.M.E.">R.M.E.</option>
-                                    <option value="Social Studies">Social Studies (JHS)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Question Text</label>
-                            <textarea id="qText" required rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Type question here..."></textarea>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <input type="text" id="optA" placeholder="Option A" required class="p-2.5 border rounded-lg">
-                            <input type="text" id="optB" placeholder="Option B" required class="p-2.5 border rounded-lg">
-                            <input type="text" id="optC" placeholder="Option C" required class="p-2.5 border rounded-lg">
-                            <input type="text" id="optD" placeholder="Option D" required class="p-2.5 border rounded-lg">
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Correct Answer</label>
-                                <select id="qCorrect" required class="w-full p-2.5 border rounded-lg">
-                                    <option value="A">Option A</option>
-                                    <option value="B">Option B</option>
-                                    <option value="C">Option C</option>
-                                    <option value="D">Option D</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Timer (Minutes)</label>
-                                <input type="number" id="testTimerMinutes" value="10" min="1" class="w-full p-2.5 border rounded-lg">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Save Question to Bank</button>
-                    </form>
-
-                    <div class="pt-4 border-t">
-                        <h5 class="font-semibold text-sm text-gray-700 mb-2">Existing Question Bank Items</h5>
-                        <div id="questionListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
-                    </div>
-                </div>
-
-                <!-- Tab 2: Manage Teachers (Admin Only) -->
-                <div id="staffTabTeachers" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4">
-                    <h4 class="font-bold text-md text-primary">Create Teachers & Assign One or More Classes (Admin Only)</h4>
-                    <form onsubmit="handleCreateTeacher(event)" class="space-y-4 border-b pb-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Teacher Full Name</label>
-                            <input type="text" id="newTeacherName" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Assign Classes (Check one or more)</label>
-                            <div id="classCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 border rounded-lg bg-gray-50 text-sm max-h-40 overflow-y-auto">
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 1"> <span>Basic 1</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 2"> <span>Basic 2</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 3"> <span>Basic 3</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 4"> <span>Basic 4</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 5"> <span>Basic 5</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="Basic 6"> <span>Basic 6</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="JHS 1"> <span>JHS 1</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="JHS 2"> <span>JHS 2</span></label>
-                                <label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="JHS 3"> <span>JHS 3</span></label>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Staff Username</label>
-                            <input type="text" id="newTeacherUser" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Initial Password</label>
-                            <input type="password" id="newTeacherPass" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <button type="submit" class="py-2 px-4 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Register New Teacher</button>
-                    </form>
-                    <div>
-                        <h5 class="font-semibold text-sm text-gray-700 mb-2">Registered Staff Directory</h5>
-                        <div id="teacherListContainer" class="space-y-2"></div>
-                    </div>
-                </div>
-
-                <!-- Tab 3: Security Settings (Change Password) -->
-                <div id="staffTabSettings" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4 max-w-md">
-                    <h4 class="font-bold text-md text-primary">Change Your Password</h4>
-                    <form onsubmit="handleChangePassword(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Current Password</label>
-                            <input type="password" id="currentPass" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">New Password</label>
-                            <input type="password" id="newPass" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Confirm New Password</label>
-                            <input type="password" id="confirmPass" required class="w-full p-2.5 border rounded-lg">
-                        </div>
-                        <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Update Password</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-100 border-t py-4 text-center text-xs text-gray-600">
-        This App was built by: Prinesther Educational Consult 0246645506/0202164699
-    </footer>
-
-    <!-- JavaScript Application Logic -->
     <script>
-        const STORAGE_KEY_QUESTIONS = "prinesther_ai_questions_v6";
-        const STORAGE_KEY_TEACHERS = "prinesther_ai_teachers_v6";
-        const STORAGE_KEY_OFFLINE_QUEUE = "prinesther_offline_queue_v6";
-
-        // Google Apps Script Web App URL (Replace with your deployed Web App URL)
-        const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
-
-        let questions = JSON.parse(localStorage.getItem(STORAGE_KEY_QUESTIONS)) || [
-            { id: 1, class: "Basic 6", subject: "Mathematics", text: "What is 12 multiplied by 8?", optA: "84", optB: "96", optC: "108", optD: "88", correct: "B", timer: 5 }
-        ];
-
-        let staffAccounts = JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS)) || [
-            { name: "School Administrator", username: "admin", pass: "admin123", role: "admin", assignedClasses: ["All Classes"] }
-        ];
-
-        let activeStudent = {};
-        let activeExamQuestions = [];
-        let studentAnswers = {};
-        let examTimerInterval = null;
-        let remainingSeconds = 0;
-        let loggedInStaff = null;
-
-        // Network Status & Offline Queue Sync Handler
-        window.addEventListener('online', () => {
-            document.getElementById('networkBadge').className = "text-[10px] px-2 py-1 bg-green-500 text-white rounded-full font-bold";
-            document.getElementById('networkBadge').innerText = "Online";
-            syncOfflineSubmissions();
-        });
-
-        window.addEventListener('offline', () => {
-            document.getElementById('networkBadge').className = "text-[10px] px-2 py-1 bg-amber-500 text-white rounded-full font-bold";
-            document.getElementById('networkBadge').innerText = "Offline Mode";
-        });
-
-        function switchPortal(portal) {
-            if(portal === 'student') {
-                document.getElementById('studentPortal').classList.remove('hidden');
-                document.getElementById('teacherPortal').classList.add('hidden');
-                document.getElementById('navStudentBtn').className = "px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition";
-                document.getElementById('navTeacherBtn').className = "px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition";
-            } else {
-                document.getElementById('studentPortal').classList.add('hidden');
-                document.getElementById('teacherPortal').classList.remove('hidden');
-                document.getElementById('navTeacherBtn').className = "px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition";
-                document.getElementById('navStudentBtn').className = "px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition";
-                
-                if(!loggedInStaff) {
-                    document.getElementById('teacherLoginCard').classList.remove('hidden');
-                    document.getElementById('teacherDashboard').classList.add('hidden');
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6A0DAD', // Purple
+                        secondary: '#4f46e5',
+                        accent: '#059669',
+                    }
                 }
             }
         }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
 
-        // Student Exam Flow
-        function handleStudentStart(event) {
-            event.preventDefault();
-            const name = document.getElementById('studentName').value.trim();
-            const sClass = document.getElementById('studentClass').value;
-            const subject = document.getElementById('studentSubject').value;
+    <!-- Toast Notification Box -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-white border-l-4 border-primary shadow-2xl rounded-r-xl p-4 flex items-center space-x-3 max-w-sm pointer-events-none">
+        <div id="toast-icon" class="text-primary text-xl"></div>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm text-slate-900"></h4>
+            <p id="toast-msg" class="text-xs text-slate-600"></p>
+        </div>
+    </div>
 
-            activeExamQuestions = questions.filter(q => q.class === sClass && q.subject === subject);
+    <!-- Custom Modal Container -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
+            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
+            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
+            </div>
+        </div>
+    </div>
 
-            if(activeExamQuestions.length === 0) {
-                alert("No questions available for " + sClass + " - " + subject + ". Please inform your teacher.");
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="flex-grow flex flex-col">
+        <!-- Dynamic views injected here -->
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center max-w-7xl mx-auto w-full gap-2">
+        <div>
+            This App was built by: <strong>Prinesther Educational Consult 0246645506/0202164699</strong>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+            <span id="cloud-sync-badge" onclick="pullFromCloud(true)" class="cursor-pointer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition" title="Click to sync with Google Sheets Cloud">
+                <i class="fas fa-cloud-upload-alt mr-1.5"></i> Cloud Sync Ready
+            </span>
+            <span id="network-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online Mode
+            </span>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // ====================================================================
+        // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW FOR GLOBAL SYNC:
+        // ====================================================================
+        const DEFAULT_CLOUD_SYNC_URL = ""; 
+
+        const DB_KEYS = {
+            SETTINGS: 'happyhome_quiz_settings_v1',
+            TEACHERS: 'happyhome_quiz_teachers_v1',
+            STUDENTS: 'happyhome_quiz_students_v1',
+            QUESTIONS: 'happyhome_quiz_questions_v1',
+            ATTEMPTS: 'happyhome_quiz_attempts_v1',
+            CURRENT_USER: 'happyhome_quiz_current_user_v1',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v1',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v1'
+        };
+
+        const TABLE_KEY_MAP = {
+            SETTINGS: DB_KEYS.SETTINGS,
+            TEACHERS: DB_KEYS.TEACHERS,
+            STUDENTS: DB_KEYS.STUDENTS,
+            QUESTIONS: DB_KEYS.QUESTIONS,
+            ATTEMPTS: DB_KEYS.ATTEMPTS
+        };
+
+        const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
+        const HAPPY_SUBJECTS = ['English Language', 'Mathematics', 'Science', 'R.M.E.', 'Social Studies'];
+
+        let activeQuizState = {
+            questions: [],
+            answers: {},
+            timerInterval: null,
+            secondsRemaining: 0,
+            activeStudent: null,
+            subject: '',
+            classGroup: ''
+        };
+
+        // --- TWO-WAY GOOGLE SHEETS CLOUD SYNC ENGINE ---
+        function getCloudSyncUrl() {
+            const s = getSettings();
+            return (s.cloudSyncUrl && s.cloudSyncUrl.trim() !== '') 
+                ? s.cloudSyncUrl.trim() 
+                : (localStorage.getItem(DB_KEYS.CLOUD_URL) || DEFAULT_CLOUD_SYNC_URL).trim();
+        }
+
+        function setCloudBadgeStatus(state, text) {
+            const badge = document.getElementById('cloud-sync-badge');
+            if (!badge) return;
+            if (state === 'syncing') {
+                badge.className = "cursor-pointer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800";
+                badge.innerHTML = `<i class="fas fa-sync fa-spin mr-1.5"></i> ${text || 'Syncing Cloud...'}`;
+            } else if (state === 'synced') {
+                badge.className = "cursor-pointer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800";
+                badge.innerHTML = `<i class="fas fa-cloud mr-1.5"></i> ${text || 'Cloud Synced'}`;
+            } else if (state === 'pending') {
+                badge.className = "cursor-pointer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800";
+                badge.innerHTML = `<i class="fas fa-cloud-upload-alt mr-1.5"></i> ${text || 'Queued Offline'}`;
+            } else {
+                badge.className = "cursor-pointer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600";
+                badge.innerHTML = `<i class="fas fa-cloud mr-1.5"></i> ${text || 'Offline Mode'}`;
+            }
+        }
+
+        async function saveTableAndSync(tableName, dataObj) {
+            const storageKey = TABLE_KEY_MAP[tableName];
+            if (!storageKey) return;
+            localStorage.setItem(storageKey, JSON.stringify(dataObj));
+
+            const url = getCloudSyncUrl();
+            if (!url) {
+                setCloudBadgeStatus('local', 'Offline Mode');
                 return;
             }
 
-            activeStudent = { name, class: sClass, subject };
-            document.getElementById('studentLoginForm').classList.add('hidden');
-            document.getElementById('examInterface').classList.remove('hidden');
-            document.getElementById('examTitleDisplay').innerText = `${subject} (${sClass})`;
-            document.getElementById('studentInfoDisplay').innerText = `Student: ${name} | Class: ${sClass}`;
+            if (!navigator.onLine) {
+                localStorage.setItem(DB_KEYS.PENDING_SYNC, 'true');
+                setCloudBadgeStatus('pending', 'Saved Locally (Offline Queue)');
+                return;
+            }
 
-            remainingSeconds = (activeExamQuestions[0].timer || 10) * 60;
-            startExamTimer();
-            renderExamQuestions();
+            setCloudBadgeStatus('syncing', 'Saving to Cloud...');
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'SYNC_TABLE',
+                        table: tableName,
+                        records: dataObj
+                    })
+                });
+                localStorage.removeItem(DB_KEYS.PENDING_SYNC);
+                setCloudBadgeStatus('synced', 'Cloud Synced');
+            } catch (err) {
+                localStorage.setItem(DB_KEYS.PENDING_SYNC, 'true');
+                setCloudBadgeStatus('pending', 'Sync Retry Queued');
+            }
+        }
+
+        async function pushAllTablesToCloud(showNotification = true) {
+            const url = getCloudSyncUrl();
+            if (!url) {
+                if (showNotification) showToast('Cloud URL Missing', 'Please paste your Google Apps Script Web App URL first.', true);
+                return;
+            }
+            setCloudBadgeStatus('syncing', 'Pushing All Data...');
+            const payloadData = {};
+            Object.keys(TABLE_KEY_MAP).forEach(tableName => {
+                const raw = localStorage.getItem(TABLE_KEY_MAP[tableName]);
+                payloadData[tableName] = raw ? JSON.parse(raw) : null;
+            });
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'SYNC_ALL',
+                        data: payloadData
+                    })
+                });
+                localStorage.removeItem(DB_KEYS.PENDING_SYNC);
+                setCloudBadgeStatus('synced', 'All Data Pushed');
+                if (showNotification) showToast('Cloud Push Complete', 'All teachers, questions, and grades synchronized.');
+            } catch (err) {
+                setCloudBadgeStatus('pending', 'Push Failed');
+                if (showNotification) showToast('Cloud Push Error', 'Could not reach Google Sheets. Check connection.', true);
+            }
+        }
+
+        async function pullFromCloud(showNotification = false) {
+            const url = getCloudSyncUrl();
+            if (!url) {
+                setCloudBadgeStatus('local', 'Offline Mode');
+                return false;
+            }
+            if (!navigator.onLine) {
+                setCloudBadgeStatus('pending', 'Offline Mode');
+                return false;
+            }
+
+            setCloudBadgeStatus('syncing', 'Fetching Cloud Updates...');
+            try {
+                const res = await fetch(url + '?t=' + Date.now());
+                const json = await res.json();
+                if (json && json.status === 'success' && json.data) {
+                    let updatedAny = false;
+                    Object.keys(TABLE_KEY_MAP).forEach(tableName => {
+                        const cloudVal = json.data[tableName];
+                        if (cloudVal !== null && cloudVal !== undefined) {
+                            if (tableName === 'SETTINGS') {
+                                cloudVal.cloudSyncUrl = cloudVal.cloudSyncUrl || url;
+                                cloudVal.adminPasscode = cloudVal.adminPasscode || getSettings().adminPasscode || 'admin123';
+                            }
+                            localStorage.setItem(TABLE_KEY_MAP[tableName], JSON.stringify(cloudVal));
+                            updatedAny = true;
+                        }
+                    });
+
+                    setCloudBadgeStatus('synced', 'Cloud Synced');
+                    if (showNotification) showToast('Cloud Synced!', 'Latest records loaded successfully.');
+                    if (updatedAny) renderApp();
+                    return true;
+                }
+            } catch (err) {
+                setCloudBadgeStatus('pending', 'Offline Mode');
+                if (showNotification) showToast('Sync Notice', 'Using cached offline data.', true);
+            }
+            return false;
+        }
+
+        function initDatabase() {
+            if (!localStorage.getItem(DB_KEYS.SETTINGS)) {
+                const defaultSettings = {
+                    schoolName: 'HAPPY HOME Preparatory School',
+                    location: 'Assin Amoabin',
+                    motto: 'Perseverance Endures',
+                    cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL,
+                    adminPasscode: 'admin123'
+                };
+                localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(defaultSettings));
+            }
+
+            if (!localStorage.getItem(DB_KEYS.TEACHERS)) {
+                const sampleTeachers = [
+                    { id: 'TCH-101', name: 'Madam Akosua Owusu', username: 'akosua', pass: 'teacher123', role: 'teacher', assignedClasses: ['Basic 5', 'Basic 6', 'JHS 1'] }
+                ];
+                localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify(sampleTeachers));
+            }
+
+            if (!localStorage.getItem(DB_KEYS.STUDENTS)) {
+                const sampleStudents = [
+                    { id: 'STU-1', name: 'Elizabeth Ayeyi Appiah', classGroup: 'Basic 6' }
+                ];
+                localStorage.setItem(DB_KEYS.STUDENTS, JSON.stringify(sampleStudents));
+            }
+
+            if (!localStorage.getItem(DB_KEYS.QUESTIONS)) {
+                const sampleQuestions = [
+                    { id: 1, class: 'Basic 6', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 },
+                    { id: 2, class: 'Basic 6', subject: 'English Language', text: 'Choose the correct plural form of "Child":', optA: 'Childs', optB: 'Children', optC: 'Childrens', optD: 'Childes', correct: 'B', timer: 5 }
+                ];
+                localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify(sampleQuestions));
+            }
+
+            if (!localStorage.getItem(DB_KEYS.ATTEMPTS)) {
+                localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify([]));
+            }
+        }
+
+        function getSettings() {
+            const raw = localStorage.getItem(DB_KEYS.SETTINGS);
+            return raw ? JSON.parse(raw) : { schoolName: 'HAPPY HOME Preparatory School', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' };
+        }
+
+        function renderLogoHTML(sizeClasses = 'w-10 h-10', iconTextSize = 'text-lg') {
+            return `
+                <div class="${sizeClasses} rounded-full bg-white text-primary flex items-center justify-center font-black shadow-sm border border-purple-200 shrink-0">
+                    <i class="fas fa-graduation-cap ${iconTextSize} leading-none"></i>
+                </div>
+            `;
+        }
+
+        function showToast(title, msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            icon.className = isError ? "fas fa-exclamation-circle text-red-600 text-xl" : "fas fa-check-circle text-emerald-600 text-xl";
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3500);
+        }
+
+        function openModal(title, bodyHTML, footerHTML = null) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerHTML = bodyHTML;
+            const footer = document.getElementById('modal-footer');
+            if (footerHTML) {
+                footer.innerHTML = footerHTML;
+            } else {
+                footer.innerHTML = `<button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>`;
+            }
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function getCurrentUser() {
+            const raw = localStorage.getItem(DB_KEYS.CURRENT_USER);
+            return raw ? JSON.parse(raw) : null;
+        }
+
+        window.addEventListener('online', () => {
+            document.getElementById('network-badge').className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800";
+            document.getElementById('network-badge').innerHTML = `<span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online Mode`;
+            if (localStorage.getItem(DB_KEYS.PENDING_SYNC) === 'true' && getCloudSyncUrl()) {
+                pushAllTablesToCloud(false);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            document.getElementById('network-badge').className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800";
+            document.getElementById('network-badge').innerHTML = `<span class="w-2 h-2 mr-1.5 bg-amber-500 rounded-full"></span> Offline Mode`;
+        });
+
+        function renderApp(viewOverride = null) {
+            const app = document.getElementById('app');
+            const currentUser = getCurrentUser();
+
+            if (viewOverride === 'student' || (!currentUser && viewOverride !== 'teacher')) {
+                app.innerHTML = getStudentPortalHTML();
+                attachStudentPortalListeners();
+            } else {
+                app.innerHTML = getStaffPortalHTML(currentUser);
+                attachStaffPortalListeners();
+            }
+            setCloudBadgeStatus(getCloudSyncUrl() ? 'synced' : 'local', getCloudSyncUrl() ? 'Cloud Synced' : 'Offline Mode');
+        }
+
+        // --- STUDENT PORTAL VIEW ---
+        function getStudentPortalHTML() {
+            const s = getSettings();
+            return `
+                <header class="bg-primary text-white shadow-md">
+                    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            ${renderLogoHTML('w-10 h-10', 'text-lg')}
+                            <div>
+                                <h1 class="font-bold text-sm sm:text-base leading-tight">${s.schoolName}, ${s.location}</h1>
+                                <p class="text-[11px] text-purple-200 italic">Motto: ${s.motto}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Student Portal</button>
+                            <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Teacher/Admin</button>
+                        </div>
+                    </div>
+                </header>
+
+                <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4">
+                    <!-- Step 1: Student Login / Details Form -->
+                    <div id="studentLoginForm" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-lg mx-auto">
+                        <h2 class="text-xl font-bold text-primary mb-1">Student Examination Portal</h2>
+                        <p class="text-xs text-gray-500 mb-6">Select your class and subject to begin your quiz.</p>
+                        
+                        <form id="startTestForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Full Name</label>
+                                <input type="text" id="studentName" required value="Elizabeth Ayeyi Appiah" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Select Class</label>
+                                <select id="studentClass" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                    <option value="">-- Choose Class --</option>
+                                    ${HAPPY_CLASSES.map(c => `<option value="${c}" ${c === 'Basic 6' ? 'selected' : ''}>${c}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Select Subject</label>
+                                <select id="studentSubject" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                    <option value="">-- Choose Subject --</option>
+                                    ${HAPPY_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Start Quiz Assessment</button>
+                        </form>
+                    </div>
+
+                    <!-- Step 2: Active Exam Interface with Timer -->
+                    <div id="examInterface" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center border-b pb-4 mb-4">
+                            <div>
+                                <h3 id="examTitleDisplay" class="font-bold text-lg text-primary">Subject Assessment</h3>
+                                <p id="studentInfoDisplay" class="text-xs text-gray-500">Student Name | Class</p>
+                            </div>
+                            <div id="timerDisplay" class="bg-red-50 text-red-600 font-bold px-3 py-1.5 rounded-lg border border-red-200 text-sm">
+                                Time Left: <span id="timeCount">00:00</span>
+                            </div>
+                        </div>
+
+                        <div id="questionContainer" class="space-y-6"></div>
+
+                        <div class="mt-8 flex justify-end">
+                            <button onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Immediate Performance Result Display -->
+                    <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-5 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800"></div>
+                        
+                        <div>
+                            <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">${s.schoolName}, ${s.location}</h4>
+                            <p class="text-[10px] text-gray-400 italic">Motto: ${s.motto}</p>
+                            <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">ASSESSMENT REPORT</h2>
+                            <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
+                            <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
+                        </div>
+
+                        <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-2">
+                            <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Performance Feedback</p>
+                            <p id="certScoreText" class="text-3xl font-black text-primary">0 / 0</p>
+                            <p id="certPercentageText" class="text-sm font-bold text-gray-700">0%</p>
+                            <div id="certFeedbackBox" class="p-3 bg-white text-purple-900 rounded-lg text-xs font-semibold shadow-sm border border-purple-200 text-left">
+                                Assessment performance description goes here...
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex flex-col sm:flex-row gap-2 no-print">
+                            <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
+                                <i class="fas fa-print"></i><span>Print Results</span>
+                            </button>
+                            <button onclick="resetStudentSession()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition text-xs">
+                                Back to Home
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            `;
+        }
+
+        function attachStudentPortalListeners() {
+            document.getElementById('startTestForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('studentName').value.trim();
+                const sClass = document.getElementById('studentClass').value;
+                const subject = document.getElementById('studentSubject').value;
+
+                const allQuestions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+                activeQuizState.questions = allQuestions.filter(q => q.class === sClass && q.subject === subject);
+
+                if (activeQuizState.questions.length === 0) {
+                    alert(`No questions available for ${sClass} - ${subject}. Please ask your teacher to add questions to the question bank.`);
+                    return;
+                }
+
+                activeQuizState.activeStudent = { name, class: sClass, subject };
+                activeQuizState.answers = {};
+
+                document.getElementById('studentLoginForm').classList.add('hidden');
+                document.getElementById('examInterface').classList.remove('hidden');
+                document.getElementById('examTitleDisplay').innerText = `${subject} (${sClass})`;
+                document.getElementById('studentInfoDisplay').innerText = `Student: ${name} | Class: ${sClass}`;
+
+                activeQuizState.secondsRemaining = (activeQuizState.questions[0].timer || 10) * 60;
+                startExamTimer();
+                renderExamQuestions();
+            });
         }
 
         function startExamTimer() {
-            clearInterval(examTimerInterval);
-            examTimerInterval = setInterval(() => {
-                if(remainingSeconds <= 0) {
-                    clearInterval(examTimerInterval);
+            if (activeQuizState.timerInterval) clearInterval(activeQuizState.timerInterval);
+            activeQuizState.timerInterval = setInterval(() => {
+                if (activeQuizState.secondsRemaining <= 0) {
+                    clearInterval(activeQuizState.timerInterval);
                     alert("Time is up! Submitting exam automatically.");
                     submitStudentExam();
                     return;
                 }
-                remainingSeconds--;
-                let mins = Math.floor(remainingSeconds / 60);
-                let secs = remainingSeconds % 60;
-                document.getElementById('timeCount').innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                activeQuizState.secondsRemaining--;
+                let mins = Math.floor(activeQuizState.secondsRemaining / 60);
+                let secs = activeQuizState.secondsRemaining % 60;
+                const timeCountEl = document.getElementById('timeCount');
+                if (timeCountEl) {
+                    timeCountEl.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                }
             }, 1000);
         }
 
         function renderExamQuestions() {
             const container = document.getElementById('questionContainer');
             container.innerHTML = "";
-            activeExamQuestions.forEach((q, index) => {
+            activeQuizState.questions.forEach((q, index) => {
                 container.innerHTML += `
                     <div class="p-4 bg-gray-50 rounded-lg border space-y-3">
                         <p class="font-semibold text-gray-800">Q${index + 1}. ${q.text}</p>
                         <div class="space-y-2 pl-2">
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A" onchange="studentAnswers[${q.id}]='A'"> <span>A) ${q.optA}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B" onchange="studentAnswers[${q.id}]='B'"> <span>B) ${q.optB}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C" onchange="studentAnswers[${q.id}]='C'"> <span>C) ${q.optC}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D" onchange="studentAnswers[${q.id}]='D'"> <span>D) ${q.optD}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A" onchange="activeQuizState.answers[${q.id}]='A'"> <span>A) ${q.optA}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B" onchange="activeQuizState.answers[${q.id}]='B'"> <span>B) ${q.optB}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C" onchange="activeQuizState.answers[${q.id}]='C'"> <span>C) ${q.optC}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D" onchange="activeQuizState.answers[${q.id}]='D'"> <span>D) ${q.optD}</span></label>
                         </div>
                     </div>
                 `;
@@ -449,47 +533,40 @@
         }
 
         function submitStudentExam() {
-            clearInterval(examTimerInterval);
+            if (activeQuizState.timerInterval) clearInterval(activeQuizState.timerInterval);
             let score = 0;
-            let total = activeExamQuestions.length;
+            let total = activeQuizState.questions.length;
 
-            activeExamQuestions.forEach(q => {
-                if(studentAnswers[q.id] && studentAnswers[q.id] === q.correct) {
+            activeQuizState.questions.forEach(q => {
+                if (activeQuizState.answers[q.id] && activeQuizState.answers[q.id] === q.correct) {
                     score++;
                 }
             });
 
             let percentage = Math.round((score / total) * 100);
 
-            // Determine descriptive feedback based on percentage rules
             let feedback = "";
-            if (percentage >= 80) {
-                feedback = "80% - 100% (Excellent): Exceptional understanding demonstrated across all tasks.";
-            } else if (percentage >= 70) {
-                feedback = "70% - 79% (Very Good): Displays a very strong grasp of coursework.";
-            } else if (percentage >= 60) {
-                feedback = "60% - 69% (Good): Shows steady academic progress and effort.";
-            } else if (percentage >= 50) {
-                feedback = "50% - 59% (Satisfactory): Meets the fundamental requirements of the course.";
-            } else {
-                feedback = "Below 50%, Needs Improvement: \"Requires more focused effort to meet fundamental learning goals.\"";
-            }
+            if (percentage >= 80) feedback = "80% - 100% (Excellent): Exceptional understanding demonstrated across all tasks.";
+            else if (percentage >= 70) feedback = "70% - 79% (Very Good): Displays a very strong grasp of coursework.";
+            else if (percentage >= 60) feedback = "60% - 69% (Good): Shows steady academic progress and effort.";
+            else if (percentage >= 50) feedback = "50% - 59% (Satisfactory): Meets the fundamental requirements of the course.";
+            else feedback = "Below 50%, Needs Improvement: \"Requires more focused effort to meet fundamental learning goals.\"";
 
             document.getElementById('examInterface').classList.add('hidden');
             document.getElementById('resultInterface').classList.remove('hidden');
             
-            // Populate Results Screen
-            document.getElementById('certStudentName').innerText = activeStudent.name;
-            document.getElementById('certStudentClass').innerText = activeStudent.class;
-            document.getElementById('certSubject').innerText = activeStudent.subject;
+            document.getElementById('certStudentName').innerText = activeQuizState.activeStudent.name;
+            document.getElementById('certStudentClass').innerText = activeQuizState.activeStudent.class;
+            document.getElementById('certSubject').innerText = activeQuizState.activeStudent.subject;
             document.getElementById('certScoreText').innerText = `${score} / ${total}`;
             document.getElementById('certPercentageText').innerText = `${percentage}% Score`;
             document.getElementById('certFeedbackBox').innerText = feedback;
 
             const submissionData = {
-                name: activeStudent.name,
-                class: activeStudent.class,
-                subject: activeStudent.subject,
+                id: 'ATT-' + Math.random().toString(36).substr(2,6).toUpperCase(),
+                name: activeQuizState.activeStudent.name,
+                class: activeQuizState.activeStudent.class,
+                subject: activeQuizState.activeStudent.subject,
                 score: score,
                 total: total,
                 percentage: percentage,
@@ -497,120 +574,381 @@
                 timestamp: new Date().toLocaleString()
             };
 
-            dispatchSubmissionToSheet(submissionData);
-        }
-
-        function dispatchSubmissionToSheet(data) {
-            if(GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                console.warn("Google Apps Script URL not configured. Saving to local offline queue.");
-                saveToOfflineQueue(data);
-                return;
-            }
-
-            if(!navigator.onLine) {
-                saveToOfflineQueue(data);
-                alert("You are offline. Result saved locally and will auto-sync when connection is restored.");
-                return;
-            }
-
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            }).then(() => {
-                console.log("Score successfully synced to class sheet.");
-            }).catch(() => {
-                saveToOfflineQueue(data);
-            });
-        }
-
-        function saveToOfflineQueue(data) {
-            let queue = JSON.parse(localStorage.getItem(STORAGE_KEY_OFFLINE_QUEUE)) || [];
-            queue.push(data);
-            localStorage.setItem(STORAGE_KEY_OFFLINE_QUEUE, JSON.stringify(queue));
-        }
-
-        function syncOfflineSubmissions() {
-            let queue = JSON.parse(localStorage.getItem(STORAGE_KEY_OFFLINE_QUEUE)) || [];
-            if(queue.length === 0 || GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return;
-
-            queue.forEach(item => {
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(item)
-                });
-            });
-
-            localStorage.removeItem(STORAGE_KEY_OFFLINE_QUEUE);
-            console.log("Offline results queue synchronized to Google Sheets.");
+            const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
+            attempts.unshift(submissionData);
+            saveTableAndSync('ATTEMPTS', attempts);
         }
 
         function resetStudentSession() {
-            studentAnswers = {};
-            activeStudent = {};
-            document.getElementById('resultInterface').classList.add('hidden');
-            document.getElementById('studentLoginForm').classList.remove('hidden');
-            document.getElementById('startTestForm').reset();
+            activeQuizState = { questions: [], answers: {}, timerInterval: null, secondsRemaining: 0, activeStudent: null, subject: '', classGroup: '' };
+            renderApp('student');
         }
 
-        // Teacher & Admin Portal Flow
-        function handleTeacherLogin(event) {
-            event.preventDefault();
-            const user = document.getElementById('teacherUsernameInput').value.trim();
-            const pass = document.getElementById('teacherPasswordInput').value;
 
-            const found = staffAccounts.find(t => t.username === user && t.pass === pass);
-            if(found) {
-                loggedInStaff = found;
-                document.getElementById('teacherLoginCard').classList.add('hidden');
-                document.getElementById('teacherDashboard').classList.remove('hidden');
-                const classesStr = found.assignedClasses ? found.assignedClasses.join(', ') : 'None';
-                document.getElementById('welcomeStaffText').innerText = `Welcome, ${found.name} (${found.role.toUpperCase()}) [Classes: ${classesStr}]`;
-                
-                if(found.role !== 'admin') {
-                    document.getElementById('tabTBtn').classList.add('hidden'); // Only admin can create teachers
-                } else {
-                    document.getElementById('tabTBtn').classList.remove('hidden');
-                }
-                renderQuestionList();
-                renderTeacherList();
-            } else {
-                alert("Invalid username or password.");
+        // --- STAFF / ADMIN PORTAL VIEW ---
+        function getStaffPortalHTML(currentUser) {
+            const s = getSettings();
+            return `
+                <header class="bg-primary text-white shadow-md">
+                    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            ${renderLogoHTML('w-10 h-10', 'text-lg')}
+                            <div>
+                                <h1 class="font-bold text-sm sm:text-base leading-tight">${s.schoolName}, ${s.location}</h1>
+                                <p class="text-[11px] text-purple-200 italic">Motto: ${s.motto}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Student Portal</button>
+                            <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Teacher/Admin</button>
+                        </div>
+                    </div>
+                </header>
+
+                <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4 space-y-6">
+                    <!-- Login Card -->
+                    <div id="teacherLoginCard" class="${currentUser ? 'hidden' : ''} bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-md mx-auto">
+                        <h2 class="text-xl font-bold text-primary mb-2">Teacher & Admin Portal</h2>
+                        <p class="text-sm text-gray-500 mb-6">Log in with your assigned staff credentials.</p>
+                        <form id="teacherLoginForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Username / Staff ID</label>
+                                <input type="text" id="teacherUsernameInput" required value="admin" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Password</label>
+                                <input type="password" id="teacherPasswordInput" required value="admin123" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Secure Login</button>
+                        </form>
+                    </div>
+
+                    <!-- Dashboard Content -->
+                    <div id="teacherDashboard" class="${currentUser ? '' : 'hidden'} space-y-6">
+                        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+                            <div>
+                                <h3 id="welcomeStaffText" class="font-bold text-lg text-primary">Welcome ${currentUser ? currentUser.name : 'Staff'} (${currentUser ? currentUser.role.toUpperCase() : ''})</h3>
+                                <p class="text-xs text-gray-500">Manage question banks, AI generators, teachers, and security settings across devices.</p>
+                            </div>
+                            <button onclick="handleTeacherLogout()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition">Logout</button>
+                        </div>
+
+                        <!-- Navigation Tabs -->
+                        <div class="flex flex-wrap gap-2 border-b pb-2">
+                            <button onclick="switchStaffTab('questions')" id="tabQBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition">Question Bank & AI</button>
+                            <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition ${currentUser && currentUser.role === 'admin' ? '' : 'hidden'}">Manage Teachers</button>
+                            <button onclick="switchStaffTab('settings')" id="tabSBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Change Password / Cloud</button>
+                        </div>
+
+                        <!-- Tab 1: Question Bank & AI Uploader -->
+                        <div id="staffTabQuestions" class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+                            <div class="border-b pb-4">
+                                <h4 class="font-bold text-md text-primary">Upload / Generate Questions (AI & Material Import)</h4>
+                                <p class="text-xs text-gray-500 mt-1">Upload files (PDF, Word docs) or copy/paste raw text to create quiz questions.</p>
+                            </div>
+
+                            <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-3">
+                                <h4 class="font-bold text-xs text-purple-900 uppercase flex items-center space-x-2">
+                                    <i class="fas fa-magic text-purple-600"></i>
+                                    <span>AI / Document Question Importer (PDF, .doc, Copy & Paste)</span>
+                                </h4>
+                                <p class="text-xs text-slate-600">Upload a study material file or paste raw text below to auto-extract questions.</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload Document (.txt, .doc, .pdf)</label>
+                                        <input type="file" id="ai-doc-file" accept=".txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button type="button" onclick="parseTextIntoQuestions()" class="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">
+                                            <i class="fas fa-robot mr-1"></i> Auto-Generate Questions from Text
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / Study Material Content</label>
+                                    <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or study notes here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
+                                </div>
+                            </div>
+
+                            <form id="saveQuestionForm" class="space-y-4 pt-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Target Class</label>
+                                        <select id="qClass" required class="w-full p-2.5 border rounded-lg">
+                                            ${HAPPY_CLASSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Subject</label>
+                                        <select id="qSubject" required class="w-full p-2.5 border rounded-lg">
+                                            ${HAPPY_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Question Text</label>
+                                    <textarea id="qText" required rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Type question here..."></textarea>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <input type="text" id="optA" placeholder="Option A" required class="p-2.5 border rounded-lg">
+                                    <input type="text" id="optB" placeholder="Option B" required class="p-2.5 border rounded-lg">
+                                    <input type="text" id="optC" placeholder="Option C" required class="p-2.5 border rounded-lg">
+                                    <input type="text" id="optD" placeholder="Option D" required class="p-2.5 border rounded-lg">
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Correct Answer</label>
+                                        <select id="qCorrect" required class="w-full p-2.5 border rounded-lg">
+                                            <option value="A">Option A</option>
+                                            <option value="B">Option B</option>
+                                            <option value="C">Option C</option>
+                                            <option value="D">Option D</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Timer (Minutes)</label>
+                                        <input type="number" id="testTimerMinutes" value="10" min="1" class="w-full p-2.5 border rounded-lg">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Save Question to Bank</button>
+                            </form>
+
+                            <div class="pt-4 border-t">
+                                <h5 class="font-semibold text-sm text-gray-700 mb-2">Existing Question Bank Items</h5>
+                                <div id="questionListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Manage Teachers (Admin Only) -->
+                        <div id="staffTabTeachers" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                            <h4 class="font-bold text-md text-primary">Create Teachers & Assign One or More Classes (Admin Only)</h4>
+                            <form id="createTeacherForm" class="space-y-4 border-b pb-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Teacher Full Name</label>
+                                    <input type="text" id="newTeacherName" required class="w-full p-2.5 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Assign Classes (Check one or more)</label>
+                                    <div id="classCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 border rounded-lg bg-gray-50 text-sm max-h-40 overflow-y-auto">
+                                        ${HAPPY_CLASSES.map(c => `<label class="flex items-center space-x-2"><input type="checkbox" name="teacherClass" value="${c}"> <span>${c}</span></label>`).join('')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Staff Username</label>
+                                    <input type="text" id="newTeacherUser" required class="w-full p-2.5 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Initial Password</label>
+                                    <input type="password" id="newTeacherPass" required class="w-full p-2.5 border rounded-lg">
+                                </div>
+                                <button type="submit" class="py-2 px-4 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Register New Teacher</button>
+                            </form>
+                            <div>
+                                <h5 class="font-semibold text-sm text-gray-700 mb-2">Registered Staff Directory</h5>
+                                <div id="teacherListContainer" class="space-y-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Security Settings (Change Password & Cloud URL) -->
+                        <div id="staffTabSettings" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-6 max-w-lg">
+                            <div>
+                                <h4 class="font-bold text-md text-primary mb-3">Change Your Password</h4>
+                                <form id="changePassForm" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Current Password</label>
+                                        <input type="password" id="currentPass" required class="w-full p-2.5 border rounded-lg">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">New Password</label>
+                                        <input type="password" id="newPass" required class="w-full p-2.5 border rounded-lg">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Confirm New Password</label>
+                                        <input type="password" id="confirmPass" required class="w-full p-2.5 border rounded-lg">
+                                    </div>
+                                    <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Update Password</button>
+                                </form>
+                            </div>
+
+                            <div class="border-t pt-4">
+                                <h4 class="font-bold text-md text-primary mb-2"><i class="fas fa-cloud mr-1"></i>Google Sheets Cloud Sync URL</h4>
+                                <p class="text-xs text-slate-500 mb-3">Paste your deployed Google Apps Script Web App URL below so all devices sync instantly.</p>
+                                <div class="space-y-3">
+                                    <input type="url" id="settingCloudUrl" value="${getCloudSyncUrl()}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 border rounded-lg text-xs font-mono">
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="saveCloudUrlSetting()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Save Cloud URL</button>
+                                        <button type="button" onclick="pushAllTablesToCloud(true)" class="py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Push Data</button>
+                                        <button type="button" onclick="pullFromCloud(true)" class="py-2 px-3 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Pull Data</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            `;
+        }
+
+        function attachStaffPortalListeners() {
+            const loginForm = document.getElementById('teacherLoginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const user = document.getElementById('teacherUsernameInput').value.trim();
+                    const pass = document.getElementById('teacherPasswordInput').value;
+
+                    if (user === 'admin' && pass === getSettings().adminPasscode) {
+                        const adminObj = { name: 'School Administrator', username: 'admin', pass: getSettings().adminPasscode, role: 'admin', assignedClasses: ['All Classes'] };
+                        localStorage.setItem(DB_KEYS.CURRENT_USER, JSON.stringify(adminObj));
+                        showToast('Login Successful', 'Welcome Super Admin');
+                        renderApp('teacher');
+                        return;
+                    }
+
+                    const teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+                    const found = teachers.find(t => t.username === user && t.pass === pass);
+                    if (found) {
+                        localStorage.setItem(DB_KEYS.CURRENT_USER, JSON.stringify(found));
+                        showToast('Login Successful', `Welcome, ${found.name}`);
+                        renderApp('teacher');
+                    } else {
+                        alert("Invalid username or password.");
+                    }
+                });
             }
+
+            const saveQForm = document.getElementById('saveQuestionForm');
+            if (saveQForm) {
+                saveQForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newQ = {
+                        id: Date.now(),
+                        class: document.getElementById('qClass').value,
+                        subject: document.getElementById('qSubject').value,
+                        text: document.getElementById('qText').value,
+                        optA: document.getElementById('optA').value,
+                        optB: document.getElementById('optB').value,
+                        optC: document.getElementById('optC').value,
+                        optD: document.getElementById('optD').value,
+                        correct: document.getElementById('qCorrect').value,
+                        timer: parseInt(document.getElementById('testTimerMinutes').value) || 10
+                    };
+
+                    const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+                    questions.push(newQ);
+                    saveTableAndSync('QUESTIONS', questions);
+                    alert("Question successfully added to bank!");
+                    saveQForm.reset();
+                    renderQuestionList();
+                });
+            }
+
+            const createTForm = document.getElementById('createTeacherForm');
+            if (createTForm) {
+                createTForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const currentUser = getCurrentUser();
+                    if (!currentUser || currentUser.role !== 'admin') {
+                        alert("Only administrators can create new teachers.");
+                        return;
+                    }
+                    const name = document.getElementById('newTeacherName').value.trim();
+                    const username = document.getElementById('newTeacherUser').value.trim();
+                    const pass = document.getElementById('newTeacherPass').value;
+
+                    const checkboxes = document.querySelectorAll('input[name="teacherClass"]:checked');
+                    const assignedClasses = Array.from(checkboxes).map(cb => cb.value);
+
+                    if (assignedClasses.length === 0) {
+                        alert("Please select at least one class for the teacher.");
+                        return;
+                    }
+
+                    const teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+                    if (teachers.some(t => t.username === username) || username === 'admin') {
+                        alert("Username already exists!");
+                        return;
+                    }
+
+                    teachers.push({ id: 'TCH-' + Date.now(), name, assignedClasses, username, pass, role: "teacher" });
+                    saveTableAndSync('TEACHERS', teachers);
+                    alert("Teacher account created and classes assigned successfully!");
+                    createTForm.reset();
+                    renderTeacherList();
+                });
+            }
+
+            const changePassForm = document.getElementById('changePassForm');
+            if (changePassForm) {
+                changePassForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const currentUser = getCurrentUser();
+                    const current = document.getElementById('currentPass').value;
+                    const newP = document.getElementById('newPass').value;
+                    const confirmP = document.getElementById('confirmPass').value;
+
+                    if (currentUser.role === 'admin') {
+                        if (current !== getSettings().adminPasscode) {
+                            alert("Current password is incorrect.");
+                            return;
+                        }
+                        if (newP !== confirmP) {
+                            alert("New passwords do not match.");
+                            return;
+                        }
+                        const s = getSettings();
+                        s.adminPasscode = newP;
+                        saveTableAndSync('SETTINGS', s);
+                        alert("Admin password updated successfully!");
+                        changePassForm.reset();
+                        return;
+                    }
+
+                    if (currentUser.pass !== current) {
+                        alert("Current password is incorrect.");
+                        return;
+                    }
+                    if (newP !== confirmP) {
+                        alert("New passwords do not match.");
+                        return;
+                    }
+
+                    currentUser.pass = newP;
+                    const teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+                    const updatedTeachers = teachers.map(t => t.username === currentUser.username ? currentUser : t);
+                    saveTableAndSync('TEACHERS', updatedTeachers);
+                    localStorage.setItem(DB_KEYS.CURRENT_USER, JSON.stringify(currentUser));
+                    alert("Password updated successfully!");
+                    changePassForm.reset();
+                });
+            }
+
+            renderQuestionList();
+            renderTeacherList();
         }
 
         function handleTeacherLogout() {
-            loggedInStaff = null;
-            document.getElementById('teacherDashboard').classList.add('hidden');
-            document.getElementById('teacherLoginCard').classList.remove('hidden');
-            document.getElementById('teacherUsernameInput').value = "";
-            document.getElementById('teacherPasswordInput').value = "";
+            localStorage.removeItem(DB_KEYS.CURRENT_USER);
+            renderApp('teacher');
         }
 
         function switchStaffTab(tab) {
-            document.getElementById('staffTabQuestions').classList.add('hidden');
-            document.getElementById('staffTabTeachers').classList.add('hidden');
-            document.getElementById('staffTabSettings').classList.add('hidden');
-            document.getElementById('tabQBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition";
-            document.getElementById('tabTBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition";
-            document.getElementById('tabSBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition";
+            ['questions', 'teachers', 'settings'].forEach(t => {
+                const el = document.getElementById(`staffTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const btn = document.getElementById(`tab${t.charAt(0).toUpperCase()}Btn`);
+                if (el) el.classList.add('hidden');
+                if (btn) btn.className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition";
+            });
 
-            if(tab === 'questions') {
-                document.getElementById('staffTabQuestions').classList.remove('hidden');
-                document.getElementById('tabQBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition";
-            } else if(tab === 'teachers') {
-                document.getElementById('staffTabTeachers').classList.remove('hidden');
-                document.getElementById('tabTBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition";
-            } else if(tab === 'settings') {
-                document.getElementById('staffTabSettings').classList.remove('hidden');
-                document.getElementById('tabSBtn').className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition";
-            }
+            const targetEl = document.getElementById(`staffTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase()}Btn`);
+            if (targetEl) targetEl.classList.remove('hidden');
+            if (targetBtn) targetBtn.className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition";
         }
 
-        // --- AI DOCUMENT & TEXT QUESTION PARSER ---
         function handleAiDocumentUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -634,6 +972,7 @@
             let currentOpts = [];
             let correctOpt = 'A';
             let parsedCount = 0;
+            const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
 
             lines.forEach(line => {
                 if (/^\d+[\.\)]/.test(line)) {
@@ -684,37 +1023,17 @@
                 parsedCount++;
             }
 
-            localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
+            saveTableAndSync('QUESTIONS', questions);
             renderQuestionList();
             alert(`AI Parser successfully extracted and added ${parsedCount} question(s) to the question bank!`);
         }
 
-        function handleSaveQuestion(event) {
-            event.preventDefault();
-            const newQ = {
-                id: Date.now(),
-                class: document.getElementById('qClass').value,
-                subject: document.getElementById('qSubject').value,
-                text: document.getElementById('qText').value,
-                optA: document.getElementById('optA').value,
-                optB: document.getElementById('optB').value,
-                optC: document.getElementById('optC').value,
-                optD: document.getElementById('optD').value,
-                correct: document.getElementById('qCorrect').value,
-                timer: parseInt(document.getElementById('testTimerMinutes').value) || 10
-            };
-
-            questions.push(newQ);
-            localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
-            alert("Question successfully added to bank!");
-            event.target.reset();
-            renderQuestionList();
-        }
-
         function renderQuestionList() {
             const container = document.getElementById('questionListContainer');
+            if (!container) return;
+            const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
             container.innerHTML = "";
-            if(questions.length === 0) {
+            if (questions.length === 0) {
                 container.innerHTML = `<p class="text-xs text-gray-400">No questions available.</p>`;
                 return;
             }
@@ -728,80 +1047,59 @@
             });
         }
 
-        // Deletion with confirmation prompt
         function deleteQuestion(id) {
             if (confirm("Are you sure you want to delete this question?")) {
+                let questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
                 questions = questions.filter(q => q.id !== id);
-                localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
+                saveTableAndSync('QUESTIONS', questions);
                 renderQuestionList();
             }
         }
 
-        function handleCreateTeacher(event) {
-            event.preventDefault();
-            if(loggedInStaff.role !== 'admin') {
-                alert("Only administrators can create new teachers.");
-                return;
-            }
-            const name = document.getElementById('newTeacherName').value.trim();
-            const username = document.getElementById('newTeacherUser').value.trim();
-            const pass = document.getElementById('newTeacherPass').value;
-
-            // Collect all checked classes
-            const checkboxes = document.querySelectorAll('input[name="teacherClass"]:checked');
-            const assignedClasses = Array.from(checkboxes).map(cb => cb.value);
-
-            if(assignedClasses.length === 0) {
-                alert("Please select at least one class for the teacher.");
-                return;
-            }
-
-            if(staffAccounts.some(t => t.username === username)) {
-                alert("Username already exists!");
-                return;
-            }
-
-            staffAccounts.push({ name, assignedClasses, username, pass, role: "teacher" });
-            localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(staffAccounts));
-            alert("Teacher account created and classes assigned successfully!");
-            event.target.reset();
-            renderTeacherList();
-        }
-
         function renderTeacherList() {
             const container = document.getElementById('teacherListContainer');
+            if (!container) return;
+            const teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+            const currentUser = getCurrentUser();
             container.innerHTML = "";
-            staffAccounts.forEach(t => {
+            teachers.forEach(t => {
                 const classesStr = t.assignedClasses ? t.assignedClasses.join(', ') : 'All Classes';
                 container.innerHTML += `
                     <div class="flex justify-between items-center p-2.5 bg-gray-50 border rounded text-xs">
                         <div><b>${t.name}</b> (${t.username}) - Assigned Classes: <span class="text-indigo-600 font-bold">${classesStr}</span> - <span class="uppercase text-purple-600 font-semibold">${t.role}</span></div>
+                        ${currentUser && currentUser.role === 'admin' ? `<button onclick="deleteTeacher('${t.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Remove</button>` : ''}
                     </div>
                 `;
             });
         }
 
-        function handleChangePassword(event) {
-            event.preventDefault();
-            const current = document.getElementById('currentPass').value;
-            const newP = document.getElementById('newPass').value;
-            const confirmP = document.getElementById('confirmPass').value;
-
-            if(loggedInStaff.pass !== current) {
-                alert("Current password is incorrect.");
-                return;
+        function deleteTeacher(teacherId) {
+            if (confirm("Are you sure you want to remove this teacher?")) {
+                let teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+                teachers = teachers.filter(t => t.id !== teacherId);
+                saveTableAndSync('TEACHERS', teachers);
+                renderTeacherList();
+                alert("Teacher removed successfully.");
             }
-            if(newP !== confirmP) {
-                alert("New passwords do not match.");
-                return;
-            }
-
-            loggedInStaff.pass = newP;
-            staffAccounts = staffAccounts.map(t => t.username === loggedInStaff.username ? loggedInStaff : t);
-            localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(staffAccounts));
-            alert("Password updated successfully!");
-            event.target.reset();
         }
+
+        function saveCloudUrlSetting() {
+            const urlInput = document.getElementById('settingCloudUrl').value.trim();
+            localStorage.setItem(DB_KEYS.CLOUD_URL, urlInput);
+            const s = getSettings();
+            s.cloudSyncUrl = urlInput;
+            saveTableAndSync('SETTINGS', s);
+            alert("Cloud URL saved successfully!");
+            pullFromCloud(true);
+        }
+
+        window.onload = function() {
+            initDatabase();
+            renderApp();
+            if (getCloudSyncUrl()) {
+                pullFromCloud(false);
+            }
+        };
     </script>
 </body>
 </html>
