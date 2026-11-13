@@ -83,30 +83,26 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxlRX6XBqG4bYTf8azs9E1fVOwlrHBkM9fKgTQJXPdioyx7tLT6ZSus-hejNTOhxKXg/exec"; 
+        const DEFAULT_CLOUD_SYNC_URL = ""; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v8',
-            TEACHERS: 'happyhome_quiz_teachers_v8',
-            QUESTIONS: 'happyhome_quiz_questions_v8',
-            ATTEMPTS: 'happyhome_quiz_attempts_v8',
-            CURRENT_USER: 'happyhome_quiz_current_user_v8',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v8',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v8'
+            SETTINGS: 'happyhome_quiz_settings_v12',
+            TEACHERS: 'happyhome_quiz_teachers_v12',
+            QUESTIONS: 'happyhome_quiz_questions_v12',
+            ATTEMPTS: 'happyhome_quiz_attempts_v12',
+            CURRENT_USER: 'happyhome_quiz_current_user_v12',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v12',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v12'
         };
 
+        // EXCLUDED ATTEMPTS from TABLE_KEY_MAP so it doesn't get synced as raw JSON text
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
-            QUESTIONS: DB_KEYS.QUESTIONS,
-            ATTEMPTS: DB_KEYS.ATTEMPTS
+            QUESTIONS: DB_KEYS.QUESTIONS
         };
 
-        const HAPPY_CLASSES = [
-            'AGRIC', 'ARTS 1', 'ARTS 2A', 'ARTS 2B', 'ARTS 3', 'ARTS 4', 
-            'BUS', 'LANG', 'H/E 1A', 'H/E 1B', 'H/E 2A', 'H/E 2B', 
-            'SCI', 'V/A 1', 'V/A 2'
-        ];
+        const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
         const HAPPY_SUBJECTS = ['English Language', 'Mathematics', 'Science', 'R.M.E.', 'Social Studies'];
 
         let activeQuizState = {
@@ -167,11 +163,7 @@
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'SYNC_TABLE',
-                        table: tableName,
-                        records: dataObj
-                    })
+                    body: JSON.stringify({ action: 'SYNC_TABLE', table: tableName, records: dataObj })
                 });
                 localStorage.removeItem(DB_KEYS.PENDING_SYNC);
                 setCloudBadgeStatus('synced', 'Cloud Synced');
@@ -199,14 +191,11 @@
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'SYNC_ALL',
-                        data: payloadData
-                    })
+                    body: JSON.stringify({ action: 'SYNC_ALL', data: payloadData })
                 });
                 localStorage.removeItem(DB_KEYS.PENDING_SYNC);
                 setCloudBadgeStatus('synced', 'All Data Pushed');
-                if (showNotification) showToast('Cloud Push Complete', 'All teachers, questions, and grades synchronized.');
+                if (showNotification) showToast('Cloud Push Complete', 'Data synchronized.');
             } catch (err) {
                 setCloudBadgeStatus('pending', 'Push Failed');
                 if (showNotification) showToast('Cloud Push Error', 'Could not reach Google Sheets. Check connection.', true);
@@ -215,12 +204,8 @@
 
         async function pullFromCloud(showNotification = false) {
             const url = getCloudSyncUrl();
-            if (!url) {
-                setCloudBadgeStatus('local', 'Offline Mode');
-                return false;
-            }
-            if (!navigator.onLine) {
-                setCloudBadgeStatus('pending', 'Offline Mode');
+            if (!url || !navigator.onLine) {
+                setCloudBadgeStatus(url ? 'pending' : 'local', 'Offline Mode');
                 return false;
             }
 
@@ -241,7 +226,6 @@
                             updatedAny = true;
                         }
                     });
-
                     setCloudBadgeStatus('synced', 'Cloud Synced');
                     if (showNotification) showToast('Cloud Synced!', 'Latest records loaded successfully.');
                     if (updatedAny) renderApp();
@@ -249,40 +233,17 @@
                 }
             } catch (err) {
                 setCloudBadgeStatus('pending', 'Offline Mode');
-                if (showNotification) showToast('Sync Notice', 'Using cached offline data.', true);
             }
             return false;
         }
 
         function initDatabase() {
             if (!localStorage.getItem(DB_KEYS.SETTINGS)) {
-                const defaultSettings = {
-                    schoolName: 'HAPPY HOME Preparatory School',
-                    location: 'Assin Amoabin',
-                    motto: 'Perseverance Endures',
-                    cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL,
-                    adminPasscode: 'admin123'
-                };
-                localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(defaultSettings));
+                localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify({ schoolName: 'HAPPY HOME Preparatory School', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' }));
             }
-
-            if (!localStorage.getItem(DB_KEYS.TEACHERS)) {
-                const sampleTeachers = [
-                    { id: 'TCH-101', name: 'Madam Akosua Owusu', username: 'akosua', pass: 'teacher123', role: 'teacher', assignedClasses: ['AGRIC', 'SCI', 'BUS'] }
-                ];
-                localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify(sampleTeachers));
-            }
-
-            if (!localStorage.getItem(DB_KEYS.QUESTIONS)) {
-                const sampleQuestions = [
-                    { id: 1, class: 'SCI', subject: 'Mathematics', text: 'What is 12 multiplied by 8?', optA: '84', optB: '96', optC: '108', optD: '88', correct: 'B', timer: 5 }
-                ];
-                localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify(sampleQuestions));
-            }
-
-            if (!localStorage.getItem(DB_KEYS.ATTEMPTS)) {
-                localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify([]));
-            }
+            if (!localStorage.getItem(DB_KEYS.TEACHERS)) localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify([]));
+            if (!localStorage.getItem(DB_KEYS.QUESTIONS)) localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify([]));
+            if (!localStorage.getItem(DB_KEYS.ATTEMPTS)) localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify([]));
         }
 
         function getSettings() {
@@ -291,24 +252,16 @@
         }
 
         function renderLogoHTML(sizeClasses = 'w-10 h-10', iconTextSize = 'text-lg') {
-            return `
-                <div class="${sizeClasses} rounded-full bg-white text-primary flex items-center justify-center font-black shadow-sm border border-purple-200 shrink-0">
-                    <i class="fas fa-graduation-cap ${iconTextSize} leading-none"></i>
-                </div>
-            `;
+            return `<img src="logo.png" alt="School Logo" class="${sizeClasses} object-contain bg-white rounded-full p-0.5 shadow-sm border border-purple-200 shrink-0" onerror="this.onerror=null; this.parentNode.innerHTML='<div class=\\'${sizeClasses} rounded-full bg-white text-primary flex items-center justify-center font-black shadow-sm border border-purple-200 shrink-0\\'><i class=\\'fas fa-graduation-cap ${iconTextSize} leading-none\\'></i></div>';">`;
         }
 
         function showToast(title, msg, isError = false) {
             const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
             document.getElementById('toast-title').innerText = title;
             document.getElementById('toast-msg').innerText = msg;
-            
-            icon.className = isError ? "fas fa-exclamation-circle text-red-600 text-xl" : "fas fa-check-circle text-emerald-600 text-xl";
+            document.getElementById('toast-icon').className = isError ? "fas fa-exclamation-circle text-red-600 text-xl" : "fas fa-check-circle text-emerald-600 text-xl";
             toast.classList.remove('translate-x-full');
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3500);
+            setTimeout(() => toast.classList.add('translate-x-full'), 3500);
         }
 
         function openModal(title, bodyHTML, footerHTML = null) {
@@ -335,9 +288,8 @@
         window.addEventListener('online', () => {
             document.getElementById('network-badge').className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800";
             document.getElementById('network-badge').innerHTML = `<span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online Mode`;
-            if (localStorage.getItem(DB_KEYS.PENDING_SYNC) === 'true' && getCloudSyncUrl()) {
-                pushAllTablesToCloud(false);
-            }
+            syncOfflineSubmissions();
+            if (localStorage.getItem(DB_KEYS.PENDING_SYNC) === 'true' && getCloudSyncUrl()) pushAllTablesToCloud(false);
         });
 
         window.addEventListener('offline', () => {
@@ -348,7 +300,6 @@
         function renderApp(viewOverride = null) {
             const app = document.getElementById('app');
             const currentUser = getCurrentUser();
-
             if (viewOverride === 'student' || (!currentUser && viewOverride !== 'teacher')) {
                 app.innerHTML = getStudentPortalHTML();
                 attachStudentPortalListeners();
@@ -380,11 +331,9 @@
                 </header>
 
                 <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4">
-                    <!-- Step 1: Student Login / Details Form -->
                     <div id="studentLoginForm" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-lg mx-auto">
                         <h2 class="text-xl font-bold text-primary mb-1">Student Examination Portal</h2>
                         <p class="text-xs text-gray-500 mb-6">Select your class and subject to begin your quiz.</p>
-                        
                         <form id="startTestForm" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Full Name</label>
@@ -408,7 +357,6 @@
                         </form>
                     </div>
 
-                    <!-- Step 2: Active Exam Interface with Timer -->
                     <div id="examInterface" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
                             <div>
@@ -419,18 +367,14 @@
                                 Time Left: <span id="timeCount">00:00</span>
                             </div>
                         </div>
-
                         <div id="questionContainer" class="space-y-6"></div>
-
                         <div class="mt-8 flex justify-end">
                             <button onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
                         </div>
                     </div>
 
-                    <!-- Step 3: Immediate Performance Result Display -->
                     <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-5 relative overflow-hidden">
                         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800"></div>
-                        
                         <div>
                             <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">${s.schoolName}, ${s.location}</h4>
                             <p class="text-[10px] text-gray-400 italic">Motto: ${s.motto}</p>
@@ -438,7 +382,6 @@
                             <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
                             <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
                         </div>
-
                         <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-2">
                             <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Performance Feedback</p>
                             <p id="certScoreText" class="text-3xl font-black text-primary">0 / 0</p>
@@ -447,7 +390,6 @@
                                 Assessment performance description goes here...
                             </div>
                         </div>
-
                         <div class="pt-2 flex flex-col sm:flex-row gap-2 no-print">
                             <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
                                 <i class="fas fa-print"></i><span>Print Results</span>
@@ -469,19 +411,23 @@
                 const subject = document.getElementById('studentSubject').value;
 
                 const allQuestions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
-                activeQuizState.questions = allQuestions.filter(q => q.class === sClass && q.subject === subject);
+                let matchingQuestions = allQuestions.filter(q => q.class === sClass && q.subject === subject);
 
-                if (activeQuizState.questions.length === 0) {
+                if (matchingQuestions.length === 0) {
                     alert(`No questions available for ${sClass} - ${subject}. Please ask your teacher to add questions to the question bank.`);
                     return;
                 }
+
+                // Shuffle and pick exactly 10 questions max
+                matchingQuestions.sort(() => Math.random() - 0.5);
+                activeQuizState.questions = matchingQuestions.slice(0, 10);
 
                 activeQuizState.activeStudent = { name, class: sClass, subject };
                 activeQuizState.answers = {};
 
                 document.getElementById('studentLoginForm').classList.add('hidden');
                 document.getElementById('examInterface').classList.remove('hidden');
-                document.getElementById('examTitleDisplay').innerText = `${subject} (${sClass})`;
+                document.getElementById('examTitleDisplay').innerText = `${subject} (${sClass}) - ${activeQuizState.questions.length} Questions`;
                 document.getElementById('studentInfoDisplay').innerText = `Student: ${name} | Class: ${sClass}`;
 
                 activeQuizState.secondsRemaining = (activeQuizState.questions[0].timer || 10) * 60;
@@ -539,7 +485,6 @@
             });
 
             let percentage = Math.round((score / total) * 100);
-
             let feedback = "";
             if (percentage >= 80) feedback = "80% - 100% (Excellent): Exceptional understanding demonstrated across all tasks.";
             else if (percentage >= 70) feedback = "70% - 79% (Very Good): Displays a very strong grasp of coursework.";
@@ -569,16 +514,60 @@
                 timestamp: new Date().toLocaleString()
             };
 
+            // Save locally ONLY (Do not trigger universal table sync for submissions)
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             attempts.unshift(submissionData);
-            saveTableAndSync('ATTEMPTS', attempts);
+            localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify(attempts));
+            
+            // Dispatch to sheet directly for nice row formatting
+            dispatchSubmissionToSheet(submissionData);
+        }
+
+        function dispatchSubmissionToSheet(data) {
+            const url = getCloudSyncUrl();
+            if (!url) {
+                saveToOfflineQueue(data);
+                return;
+            }
+            if (!navigator.onLine) {
+                saveToOfflineQueue(data);
+                showToast("Offline Mode", "Result saved locally. Will sync when online.", true);
+                return;
+            }
+            fetch(url, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'APPEND_RESULT', record: data })
+            }).catch(() => saveToOfflineQueue(data));
+        }
+
+        function saveToOfflineQueue(data) {
+            let queue = JSON.parse(localStorage.getItem(DB_KEYS.PENDING_SYNC + '_results') || '[]');
+            queue.push(data);
+            localStorage.setItem(DB_KEYS.PENDING_SYNC + '_results', JSON.stringify(queue));
+        }
+
+        function syncOfflineSubmissions() {
+            const url = getCloudSyncUrl();
+            let queue = JSON.parse(localStorage.getItem(DB_KEYS.PENDING_SYNC + '_results') || '[]');
+            if (queue.length === 0 || !url) return;
+
+            queue.forEach(item => {
+                fetch(url, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'APPEND_RESULT', record: item })
+                });
+            });
+            localStorage.removeItem(DB_KEYS.PENDING_SYNC + '_results');
         }
 
         function resetStudentSession() {
             activeQuizState = { questions: [], answers: {}, timerInterval: null, secondsRemaining: 0, activeStudent: null, subject: '', classGroup: '' };
             renderApp('student');
         }
-
 
         // --- STAFF / ADMIN PORTAL VIEW ---
         function getStaffPortalHTML(currentUser) {
@@ -603,7 +592,6 @@
                 </header>
 
                 <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4 space-y-6">
-                    <!-- Login Card -->
                     <div id="teacherLoginCard" class="${currentUser ? 'hidden' : ''} bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-md mx-auto">
                         <h2 class="text-xl font-bold text-primary mb-2">Teacher & Admin Portal</h2>
                         <p class="text-sm text-gray-500 mb-6">Log in with your assigned staff credentials.</p>
@@ -620,7 +608,6 @@
                         </form>
                     </div>
 
-                    <!-- Dashboard Content -->
                     <div id="teacherDashboard" class="${currentUser ? '' : 'hidden'} space-y-6">
                         <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
                             <div>
@@ -630,7 +617,6 @@
                             <button onclick="handleTeacherLogout()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition">Logout</button>
                         </div>
 
-                        <!-- Navigation Tabs -->
                         <div class="flex flex-wrap gap-2 border-b pb-2">
                             <button onclick="switchStaffTab('questions')" id="tabQBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition">Question Bank & AI</button>
                             <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition ${isAdmin ? '' : 'hidden'}">Manage Teachers</button>
@@ -639,31 +625,36 @@
 
                         <!-- Tab 1: Question Bank & AI Uploader -->
                         <div id="staffTabQuestions" class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
-                            <div class="border-b pb-4">
-                                <h4 class="font-bold text-md text-primary">Upload / Generate Questions (AI & Material Import)</h4>
-                                <p class="text-xs text-gray-500 mt-1">Upload files (PDF, Word docs) or copy/paste raw text to create quiz questions.</p>
+                            <div class="border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <h4 class="font-bold text-md text-primary">Upload / Generate Questions (Excel, AI & Material Import)</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Upload CSV/Excel templates, PDF/Word docs, or copy/paste raw text.</p>
+                                </div>
+                                <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+                                    <i class="fas fa-file-excel"></i><span>Download Excel/CSV Template</span>
+                                </button>
                             </div>
 
                             <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-3">
                                 <h4 class="font-bold text-xs text-purple-900 uppercase flex items-center space-x-2">
                                     <i class="fas fa-magic text-purple-600"></i>
-                                    <span>AI / Document Question Importer (PDF, .doc, Copy & Paste)</span>
+                                    <span>AI / Document / Excel Question Importer</span>
                                 </h4>
-                                <p class="text-xs text-slate-600">Upload a study material file or paste raw text below to auto-extract questions.</p>
+                                <p class="text-xs text-slate-600">Upload an Excel/CSV file (.csv), study document, or paste raw text below to auto-extract questions.</p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload Document (.txt, .doc, .pdf)</label>
-                                        <input type="file" id="ai-doc-file" accept=".txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
+                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload File (.csv, .txt, .doc, .pdf)</label>
+                                        <input type="file" id="ai-doc-file" accept=".csv,.txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
                                     </div>
                                     <div class="flex items-end">
                                         <button type="button" onclick="parseTextIntoQuestions()" class="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">
-                                            <i class="fas fa-robot mr-1"></i> Auto-Generate Questions from Text
+                                            <i class="fas fa-robot mr-1"></i> Auto-Generate Questions
                                         </button>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / Study Material Content</label>
-                                    <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or study notes here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / CSV Content Preview</label>
+                                    <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or CSV data here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
                                 </div>
                             </div>
 
@@ -682,19 +673,16 @@
                                         </select>
                                     </div>
                                 </div>
-
                                 <div>
                                     <label class="block text-sm font-medium mb-1">Question Text</label>
                                     <textarea id="qText" required rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Type question here..."></textarea>
                                 </div>
-
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <input type="text" id="optA" placeholder="Option A" required class="p-2.5 border rounded-lg">
                                     <input type="text" id="optB" placeholder="Option B" required class="p-2.5 border rounded-lg">
                                     <input type="text" id="optC" placeholder="Option C" required class="p-2.5 border rounded-lg">
                                     <input type="text" id="optD" placeholder="Option D" required class="p-2.5 border rounded-lg">
                                 </div>
-
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Correct Answer</label>
@@ -710,7 +698,6 @@
                                         <input type="number" id="testTimerMinutes" value="10" min="1" class="w-full p-2.5 border rounded-lg">
                                     </div>
                                 </div>
-
                                 <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Save Question to Bank</button>
                             </form>
 
@@ -720,7 +707,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab 2: Manage Teachers (Admin Only) -->
+                        <!-- Tab 2: Manage Teachers -->
                         <div id="staffTabTeachers" class="${isAdmin ? '' : 'hidden'} bg-white p-6 rounded-xl shadow-sm border space-y-4">
                             <h4 class="font-bold text-md text-primary">Create Teachers & Assign One or More Classes (Admin Only)</h4>
                             <form id="createTeacherForm" class="space-y-4 border-b pb-6">
@@ -750,7 +737,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab 3: Security Settings (Change Password) -->
+                        <!-- Tab 3: Settings -->
                         <div id="staffTabSettings" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-6 max-w-lg">
                             <div>
                                 <h4 class="font-bold text-md text-primary mb-3">Change Your Password</h4>
@@ -789,6 +776,20 @@
                     </div>
                 </main>
             `;
+        }
+
+        function downloadExcelTemplate() {
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                "Class,Subject,Question,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,TimerMinutes\n" +
+                "Basic 6,Mathematics,What is 5 + 5?,5,10,15,20,B,10\n" +
+                "Basic 6,English Language,Choose the noun.,Run,Fast,Book,Quick,C,10";
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "HappyHome_Quiz_Template.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function attachStaffPortalListeners() {
@@ -954,7 +955,7 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 document.getElementById('ai-raw-text').value = e.target.result;
-                alert(`Document ${file.name} text loaded successfully. Click 'Auto-Generate Questions'.`);
+                alert(`File ${file.name} loaded successfully. Click 'Auto-Generate Questions'.`);
             };
             reader.readAsText(file);
         }
@@ -962,69 +963,92 @@
         function parseTextIntoQuestions() {
             const rawText = document.getElementById('ai-raw-text').value.trim();
             if (!rawText) {
-                alert("Please paste text or upload a document first.");
+                alert("Please paste text, CSV, or upload a document first.");
                 return;
             }
 
-            const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
-            let currentQ = '';
-            let currentOpts = [];
-            let correctOpt = 'A';
-            let parsedCount = 0;
             const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+            let parsedCount = 0;
 
-            lines.forEach(line => {
-                if (/^\d+[\.\)]/.test(line)) {
-                    if (currentQ && currentOpts.length >= 2) {
+            if (rawText.includes(',')) {
+                const rows = rawText.split('\n').map(r => r.trim()).filter(Boolean);
+                rows.forEach((row, idx) => {
+                    if (idx === 0 && row.toLowerCase().includes('question')) return;
+                    const cols = row.split(',').map(c => c.trim());
+                    if (cols.length >= 8) {
                         questions.push({
                             id: Date.now() + Math.random(),
-                            class: document.getElementById('qClass').value,
-                            subject: document.getElementById('qSubject').value,
-                            text: currentQ,
-                            optA: currentOpts[0] || 'Option A',
-                            optB: currentOpts[1] || 'Option B',
-                            optC: currentOpts[2] || 'Option C',
-                            optD: currentOpts[3] || 'Option D',
-                            correct: correctOpt,
-                            timer: parseInt(document.getElementById('testTimerMinutes').value) || 10
+                            class: cols[0] || document.getElementById('qClass').value,
+                            subject: cols[1] || document.getElementById('qSubject').value,
+                            text: cols[2],
+                            optA: cols[3],
+                            optB: cols[4],
+                            optC: cols[5],
+                            optD: cols[6],
+                            correct: (cols[7] || 'A').toUpperCase(),
+                            timer: parseInt(cols[8]) || 10
                         });
                         parsedCount++;
                     }
-                    currentQ = line.replace(/^\d+[\.\)]\s*/, '');
-                    currentOpts = [];
-                    correctOpt = 'A';
-                } else if (/^[a-dA-D][\.\)]/.test(line)) {
-                    currentOpts.push(line.replace(/^[a-dA-D][\.\)]\s*/, ''));
-                    if (line.toLowerCase().includes('(correct)') || /^\[?correct\]?/i.test(line)) {
-                        correctOpt = line.charAt(0).toUpperCase();
-                    }
-                } else if (/^answer\s*[:\-]\s*[a-d]/i.test(line)) {
-                    const match = line.match(/[a-d]/i);
-                    if (match) correctOpt = match[0].toUpperCase();
-                } else if (currentQ && currentOpts.length < 4) {
-                    currentOpts.push(line);
-                }
-            });
-
-            if (currentQ && currentOpts.length >= 2) {
-                questions.push({
-                    id: Date.now() + Math.random(),
-                    class: document.getElementById('qClass').value,
-                    subject: document.getElementById('qSubject').value,
-                    text: currentQ,
-                    optA: currentOpts[0] || 'Option A',
-                    optB: currentOpts[1] || 'Option B',
-                    optC: currentOpts[2] || 'Option C',
-                    optD: currentOpts[3] || 'Option D',
-                    correct: correctOpt,
-                    timer: parseInt(document.getElementById('testTimerMinutes').value) || 10
                 });
-                parsedCount++;
+            }
+
+            if (parsedCount === 0) {
+                const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+                let currentQ = '';
+                let currentOpts = [];
+                let correctOpt = 'A';
+
+                lines.forEach(line => {
+                    if (/^\d+[\.\)]/.test(line)) {
+                        if (currentQ && currentOpts.length >= 2) {
+                            questions.push({
+                                id: Date.now() + Math.random(),
+                                class: document.getElementById('qClass').value,
+                                subject: document.getElementById('qSubject').value,
+                                text: currentQ,
+                                optA: currentOpts[0] || 'Option A',
+                                optB: currentOpts[1] || 'Option B',
+                                optC: currentOpts[2] || 'Option C',
+                                optD: currentOpts[3] || 'Option D',
+                                correct: correctOpt,
+                                timer: 10
+                            });
+                            parsedCount++;
+                        }
+                        currentQ = line.replace(/^\d+[\.\)]\s*/, '');
+                        currentOpts = [];
+                        correctOpt = 'A';
+                    } else if (/^[a-dA-D][\.\)]/.test(line)) {
+                        currentOpts.push(line.replace(/^[a-dA-D][\.\)]\s*/, ''));
+                        if (line.toLowerCase().includes('(correct)') || /^\[?correct\]?/i.test(line)) {
+                            correctOpt = line.charAt(0).toUpperCase();
+                        }
+                    } else if (currentQ && currentOpts.length < 4) {
+                        currentOpts.push(line);
+                    }
+                });
+
+                if (currentQ && currentOpts.length >= 2) {
+                    questions.push({
+                        id: Date.now() + Math.random(),
+                        class: document.getElementById('qClass').value,
+                        subject: document.getElementById('qSubject').value,
+                        text: currentQ,
+                        optA: currentOpts[0] || 'Option A',
+                        optB: currentOpts[1] || 'Option B',
+                        optC: currentOpts[2] || 'Option C',
+                        optD: currentOpts[3] || 'Option D',
+                        correct: correctOpt,
+                        timer: 10
+                    });
+                    parsedCount++;
+                }
             }
 
             saveTableAndSync('QUESTIONS', questions);
             renderQuestionList();
-            alert(`AI Parser successfully extracted and added ${parsedCount} question(s) to the question bank!`);
+            alert(`Importer successfully added ${parsedCount} question(s) to the question bank!`);
         }
 
         function renderQuestionList() {
@@ -1047,12 +1071,10 @@
         }
 
         function deleteQuestion(id) {
-            if (confirm("Are you sure you want to delete this question?")) {
-                let questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
-                questions = questions.filter(q => q.id !== id);
-                saveTableAndSync('QUESTIONS', questions);
-                renderQuestionList();
-            }
+            let questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+            questions = questions.filter(q => q.id !== id);
+            saveTableAndSync('QUESTIONS', questions);
+            renderQuestionList();
         }
 
         function renderTeacherList() {
@@ -1073,13 +1095,11 @@
         }
 
         function deleteTeacher(teacherId) {
-            if (confirm("Are you sure you want to remove this teacher?")) {
-                let teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
-                teachers = teachers.filter(t => t.id !== teacherId);
-                saveTableAndSync('TEACHERS', teachers);
-                renderTeacherList();
-                alert("Teacher removed successfully.");
-            }
+            let teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
+            teachers = teachers.filter(t => t.id !== teacherId);
+            saveTableAndSync('TEACHERS', teachers);
+            renderTeacherList();
+            alert("Teacher removed successfully.");
         }
 
         function saveCloudUrlSetting() {
