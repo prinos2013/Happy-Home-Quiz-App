@@ -109,31 +109,30 @@
                 </div>
             </div>
 
-            <!-- Step 3: Immediate Certificate Result Display -->
+            <!-- Step 3: Immediate Performance Result Display -->
             <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-5 relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800"></div>
                 
                 <div>
-                    <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">Happy Home Preparatory School, Assin Amoabin</h4>
+                    <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">HAPPY HOME Preparatory School, Assin Amoabin</h4>
                     <p class="text-[10px] text-gray-400 italic">Motto: Perseverance Endures</p>
-                    <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">CERTIFICATE OF PERFORMANCE</h2>
-                    <p class="text-xs text-gray-500 mt-1">This is to certify that</p>
-                    <h3 id="certStudentName" class="text-xl font-bold text-primary mt-1 underline decoration-purple-300">Student Name</h3>
-                    <p class="text-xs text-gray-600 mt-1">of Class <b id="certStudentClass">Basic 6</b> has successfully completed the assessment in <b id="certSubject">Mathematics</b>.</p>
+                    <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">ASSESSMENT REPORT</h2>
+                    <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
+                    <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
                 </div>
 
-                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-1">
-                    <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Grade</p>
+                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-2">
+                    <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Performance Feedback</p>
                     <p id="certScoreText" class="text-3xl font-black text-primary">0 / 0</p>
                     <p id="certPercentageText" class="text-sm font-bold text-gray-700">0%</p>
-                    <div id="certRemarkBox" class="mt-2 inline-block px-3 py-1 bg-white text-purple-800 rounded-full text-xs font-black shadow-sm border border-purple-200">
-                        Remark: Excellent
+                    <div id="certFeedbackBox" class="p-3 bg-white text-purple-900 rounded-lg text-xs font-semibold shadow-sm border border-purple-200 text-left">
+                        Assessment performance description goes here...
                     </div>
                 </div>
 
                 <div class="pt-2 flex flex-col sm:flex-row gap-2 no-print">
                     <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
-                        <i class="fas fa-print"></i><span>Print Certificate</span>
+                        <i class="fas fa-print"></i><span>Print Results</span>
                     </button>
                     <button onclick="resetStudentSession()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition text-xs">
                         Back to Home
@@ -337,9 +336,9 @@
 
     <!-- JavaScript Application Logic -->
     <script>
-        const STORAGE_KEY_QUESTIONS = "prinesther_ai_questions_v5";
-        const STORAGE_KEY_TEACHERS = "prinesther_ai_teachers_v5";
-        const STORAGE_KEY_OFFLINE_QUEUE = "prinesther_offline_queue_v5";
+        const STORAGE_KEY_QUESTIONS = "prinesther_ai_questions_v6";
+        const STORAGE_KEY_TEACHERS = "prinesther_ai_teachers_v6";
+        const STORAGE_KEY_OFFLINE_QUEUE = "prinesther_offline_queue_v6";
 
         // Google Apps Script Web App URL (Replace with your deployed Web App URL)
         const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
@@ -462,24 +461,30 @@
 
             let percentage = Math.round((score / total) * 100);
 
-            // Determine remark based on percentage
-            let remark = "Good";
-            if (percentage >= 90) remark = "Great Marvelous";
-            else if (percentage >= 80) remark = "Excellent";
-            else if (percentage >= 70) remark = "Very Good";
-            else if (percentage >= 50) remark = "Credit";
-            else remark = "Pass / Needs Improvement";
+            // Determine descriptive feedback based on percentage rules
+            let feedback = "";
+            if (percentage >= 80) {
+                feedback = "80% - 100% (Excellent): Exceptional understanding demonstrated across all tasks.";
+            } else if (percentage >= 70) {
+                feedback = "70% - 79% (Very Good): Displays a very strong grasp of coursework.";
+            } else if (percentage >= 60) {
+                feedback = "60% - 69% (Good): Shows steady academic progress and effort.";
+            } else if (percentage >= 50) {
+                feedback = "50% - 59% (Satisfactory): Meets the fundamental requirements of the course.";
+            } else {
+                feedback = "Below 50%, Needs Improvement: \"Requires more focused effort to meet fundamental learning goals.\"";
+            }
 
             document.getElementById('examInterface').classList.add('hidden');
             document.getElementById('resultInterface').classList.remove('hidden');
             
-            // Populate Certificate
+            // Populate Results Screen
             document.getElementById('certStudentName').innerText = activeStudent.name;
             document.getElementById('certStudentClass').innerText = activeStudent.class;
             document.getElementById('certSubject').innerText = activeStudent.subject;
             document.getElementById('certScoreText').innerText = `${score} / ${total}`;
-            document.getElementById('certPercentageText').innerText = `${percentage}% Success Rate`;
-            document.getElementById('certRemarkBox').innerText = `Remark: ${remark}`;
+            document.getElementById('certPercentageText').innerText = `${percentage}% Score`;
+            document.getElementById('certFeedbackBox').innerText = feedback;
 
             const submissionData = {
                 name: activeStudent.name,
@@ -488,7 +493,7 @@
                 score: score,
                 total: total,
                 percentage: percentage,
-                remark: remark,
+                feedback: feedback,
                 timestamp: new Date().toLocaleString()
             };
 
@@ -723,10 +728,13 @@
             });
         }
 
+        // Deletion with confirmation prompt
         function deleteQuestion(id) {
-            questions = questions.filter(q => q.id !== id);
-            localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
-            renderQuestionList();
+            if (confirm("Are you sure you want to delete this question?")) {
+                questions = questions.filter(q => q.id !== id);
+                localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
+                renderQuestionList();
+            }
         }
 
         function handleCreateTeacher(event) {
