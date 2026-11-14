@@ -30,8 +30,8 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         @media print {
             body * { visibility: hidden; }
-            #resultInterface, #resultInterface * { visibility: visible; }
-            #resultInterface { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+            #resultInterface, #gformResultInterface, #resultInterface *, #gformResultInterface * { visibility: visible; }
+            #resultInterface, #gformResultInterface { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
             .no-print { display: none !important; }
         }
     </style>
@@ -44,20 +44,6 @@
         <div>
             <h4 id="toast-title" class="font-bold text-sm text-slate-900"></h4>
             <p id="toast-msg" class="text-xs text-slate-600"></p>
-        </div>
-    </div>
-
-    <!-- Custom Modal Container -->
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
-            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
-            </div>
-            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
-            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
-            </div>
         </div>
     </div>
 
@@ -86,13 +72,13 @@
         const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v18',
-            TEACHERS: 'happyhome_quiz_teachers_v18',
-            QUESTIONS: 'happyhome_quiz_questions_v18',
-            ATTEMPTS: 'happyhome_quiz_attempts_v18',
-            CURRENT_USER: 'happyhome_quiz_current_user_v18',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v18',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v18'
+            SETTINGS: 'happyhome_quiz_settings_v20',
+            TEACHERS: 'happyhome_quiz_teachers_v20',
+            QUESTIONS: 'happyhome_quiz_questions_v20',
+            ATTEMPTS: 'happyhome_quiz_attempts_v20',
+            CURRENT_USER: 'happyhome_quiz_current_user_v20',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v20',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v20'
         };
 
         const TABLE_KEY_MAP = {
@@ -106,8 +92,9 @@
         const HAPPY_SUBJECTS = ['English Language', 'Mathematics', 'Science', 'R.M.E.', 'Social Studies'];
 
         let activeQuizState = {
+            isGoogleForm: false,
+            formUrl: '',
             questions: [],
-            answers: {},
             timerInterval: null,
             secondsRemaining: 0,
             activeStudent: null,
@@ -115,13 +102,7 @@
             classGroup: ''
         };
 
-        // Unique ID Generator for reliable answer linking
         const generateID = () => 'Q_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-
-        // Global function to cleanly record answers securely
-        window.recordAnswer = function(questionId, value) {
-            activeQuizState.answers[questionId] = value;
-        };
 
         // --- PWA Installation Logic ---
         let deferredPrompt;
@@ -338,8 +319,8 @@
                         <div class="flex items-center space-x-3">
                             ${renderLogoHTML('w-10 h-10', 'text-lg')}
                             <div>
-                                <h1 class="font-bold text-sm sm:text-base leading-tight">HAPPY HOME PREPARATORY SCHOOL</h1>
-                                <p class="text-[11px] text-purple-200 italic">Assin Amoabin</p>
+                                <h1 class="font-bold text-sm sm:text-base leading-tight">${s.schoolName}</h1>
+                                <p class="text-[11px] text-purple-200 italic">${s.location}</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -389,44 +370,80 @@
                                 Time Left: <span id="timeCount">00:00</span>
                             </div>
                         </div>
+                        
                         <div id="questionContainer" class="space-y-6"></div>
+                        
                         <div class="mt-8 flex justify-end">
-                            <button onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
+                            <button id="nativeSubmitBtn" onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
+                            <button id="gformSubmitBtn" onclick="finishGoogleFormExam()" class="hidden px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-lg animate-pulse"><i class="fas fa-check-double mr-1"></i> I have submitted on Google Forms -> Finish Exam</button>
                         </div>
                     </div>
 
-                    <!-- Step 3: Immediate Performance Result Display -->
+                    <!-- Native Result Display (Formatted to Match Image Request) -->
                     <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-4 relative overflow-hidden">
                         
                         <div>
                             <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">${s.schoolName}</h2>
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">${s.location}</h3>
+                            <h3 class="text-lg font-bold text-slate-900 mb-6">${s.location}</h3>
                             
-                            <!-- Smaller Assessment Report Title -->
-                            <h4 class="text-base sm:text-lg font-bold font-serif mb-2 tracking-widest uppercase text-slate-900">Assessment Report</h4>
+                            <!-- Scaled Down Assessment Report Title -->
+                            <h4 class="text-lg font-bold font-serif mb-3 tracking-widest uppercase text-slate-900">Assessment Report</h4>
                             
-                            <!-- Enlarged Student Name -->
-                            <div id="certStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-2">Student Name</div>
+                            <!-- Enlarged Student Name matching Remark Size -->
+                            <h3 id="certStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-3">Student Name</h3>
                             
-                            <div class="flex items-center justify-center space-x-2 text-lg sm:text-xl font-medium text-slate-800">
+                            <div class="flex items-center justify-center space-x-4 text-lg sm:text-xl font-medium text-slate-800">
                                 <span id="certStudentClass">Class()</span>
-                                <span>-</span>
                                 <span id="certSubject">Subject()</span>
                             </div>
                         </div>
                         
-                        <div class="pt-6 border-t border-purple-100">
-                            <!-- Removed 80-100% ranges, just plain feedback -->
-                            <h2 id="certRemarkTitle" class="text-4xl sm:text-5xl font-black text-red-600 uppercase font-serif tracking-wide mb-2">Excellent</h2>
-                            <p id="certFeedbackDesc" class="text-sm sm:text-base text-gray-700 mt-2 font-medium">
-                                Exceptional understanding demonstrated across all tasks.
-                            </p>
+                        <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto mt-6">
+                            <p class="text-xs uppercase tracking-wider font-bold text-purple-900 mb-1">Final Score</p>
+                            <p id="certScoreText" class="text-4xl font-black text-primary leading-none">0 / 0</p>
+                            
+                            <div class="mt-5 pt-5 border-t border-purple-200">
+                                <h2 id="certRemarkTitle" class="text-4xl sm:text-5xl font-black text-red-600 uppercase font-serif tracking-wide mb-3">Excellent</h2>
+                                <p id="certFeedbackDesc" class="text-sm sm:text-base text-gray-700 font-medium bg-white p-3 rounded border border-gray-200 shadow-sm">
+                                    Exceptional understanding demonstrated across all tasks.
+                                </p>
+                            </div>
                         </div>
 
                         <div class="pt-6 flex flex-col sm:flex-row gap-2 no-print">
                             <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
                                 <i class="fas fa-print"></i><span>Print Results</span>
                             </button>
+                            <button onclick="resetStudentSession()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition text-xs">
+                                Back to Home
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Google Form Result Display -->
+                    <div id="gformResultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-blue-200 text-center max-w-xl mx-auto space-y-4 relative overflow-hidden">
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">${s.schoolName}</h2>
+                            <h3 class="text-lg font-bold text-slate-900 mb-6">${s.location}</h3>
+                            
+                            <h4 class="text-lg font-bold font-serif mb-3 tracking-widest uppercase text-slate-900">Assessment Report</h4>
+                            
+                            <h3 id="gfCertStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-3">Student Name</h3>
+                            
+                            <div class="flex items-center justify-center space-x-4 text-lg sm:text-xl font-medium text-slate-800">
+                                <span id="gfCertStudentClass">Class()</span>
+                                <span id="gfCertSubject">Subject()</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-8 border-t border-blue-100 mt-4">
+                            <h2 class="text-3xl sm:text-4xl font-black text-red-600 uppercase font-serif tracking-wide mb-2">Results forwarded.</h2>
+                            <p class="text-sm sm:text-base text-gray-700 mt-2 font-medium">
+                                You would be alerted!
+                            </p>
+                        </div>
+
+                        <div class="pt-8 flex flex-col sm:flex-row gap-2 no-print">
                             <button onclick="resetStudentSession()" class="flex-1 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition text-xs">
                                 Back to Home
                             </button>
@@ -444,21 +461,31 @@
                 const subject = document.getElementById('studentSubject').value;
 
                 const allQuestions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
-                let matchingQuestions = allQuestions.filter(q => q.class === sClass && q.subject === subject);
+                
+                let gFormEntry = allQuestions.find(q => q.type === 'google_form' && q.class === sClass && q.subject === subject);
 
-                if (matchingQuestions.length === 0) {
-                    alert(`No questions available for ${sClass} - ${subject}. Please ask your teacher to add questions to the question bank.`);
-                    return;
+                if (gFormEntry) {
+                    activeQuizState.isGoogleForm = true;
+                    activeQuizState.formUrl = gFormEntry.url;
+                    activeQuizState.questions = [gFormEntry]; 
+                } else {
+                    activeQuizState.isGoogleForm = false;
+                    let matchingQuestions = allQuestions.filter(q => q.type !== 'google_form' && q.class === sClass && q.subject === subject);
+                    if (matchingQuestions.length === 0) {
+                        alert(`No questions available for ${sClass} - ${subject}. Please ask your teacher to add questions to the question bank.`);
+                        return;
+                    }
+                    matchingQuestions.sort(() => Math.random() - 0.5);
+                    activeQuizState.questions = matchingQuestions.slice(0, 10);
                 }
 
-                matchingQuestions.sort(() => Math.random() - 0.5);
-                activeQuizState.questions = matchingQuestions.slice(0, 10);
                 activeQuizState.activeStudent = { name, class: sClass, subject };
-                activeQuizState.answers = {};
-
+                
                 document.getElementById('studentLoginForm').classList.add('hidden');
                 document.getElementById('examInterface').classList.remove('hidden');
-                document.getElementById('examTitleDisplay').innerText = `${subject} (${sClass}) - ${activeQuizState.questions.length} Questions`;
+                
+                let examTitle = activeQuizState.isGoogleForm ? `${subject} (${sClass}) - Embedded Google Form` : `${subject} (${sClass}) - ${activeQuizState.questions.length} Questions`;
+                document.getElementById('examTitleDisplay').innerText = examTitle;
                 document.getElementById('studentInfoDisplay').innerText = `Student: ${name} | Class: ${sClass}`;
 
                 activeQuizState.secondsRemaining = (activeQuizState.questions[0].timer || 10) * 60;
@@ -473,7 +500,11 @@
                 if (activeQuizState.secondsRemaining <= 0) {
                     clearInterval(activeQuizState.timerInterval);
                     alert("Time is up! Submitting exam automatically.");
-                    submitStudentExam();
+                    if (activeQuizState.isGoogleForm) {
+                        finishGoogleFormExam();
+                    } else {
+                        submitStudentExam();
+                    }
                     return;
                 }
                 activeQuizState.secondsRemaining--;
@@ -489,35 +520,89 @@
         function renderExamQuestions() {
             const container = document.getElementById('questionContainer');
             container.innerHTML = "";
+            
+            if (activeQuizState.isGoogleForm) {
+                container.innerHTML = `
+                    <div class="w-full h-[650px] border border-gray-200 rounded-lg overflow-hidden relative">
+                        <iframe src="${activeQuizState.formUrl}" width="100%" height="100%" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
+                    </div>
+                    <div class="p-3 mt-4 bg-blue-50 border border-blue-200 text-blue-900 text-sm rounded-lg shadow-sm">
+                        <i class="fas fa-info-circle mr-1"></i> Make sure to hit the <b>Submit</b> button inside the Google Form above BEFORE clicking the "Finish Exam" button below.
+                    </div>
+                `;
+                document.getElementById('nativeSubmitBtn').classList.add('hidden');
+                document.getElementById('gformSubmitBtn').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('nativeSubmitBtn').classList.remove('hidden');
+            document.getElementById('gformSubmitBtn').classList.add('hidden');
+
             activeQuizState.questions.forEach((q, index) => {
+                // Generate secure radio buttons
                 container.innerHTML += `
                     <div class="p-4 bg-gray-50 rounded-lg border space-y-3">
                         <p class="font-semibold text-gray-800">Q${index + 1}. ${q.text}</p>
                         <div class="space-y-2 pl-2">
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A" onchange="window.recordAnswer('${q.id}', 'A')"> <span>A) ${q.optA}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B" onchange="window.recordAnswer('${q.id}', 'B')"> <span>B) ${q.optB}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C" onchange="window.recordAnswer('${q.id}', 'C')"> <span>C) ${q.optC}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D" onchange="window.recordAnswer('${q.id}', 'D')"> <span>D) ${q.optD}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A"> <span>A) ${q.optA}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B"> <span>B) ${q.optB}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C"> <span>C) ${q.optC}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D"> <span>D) ${q.optD}</span></label>
                         </div>
                     </div>
                 `;
             });
         }
 
+        function finishGoogleFormExam() {
+            if (activeQuizState.timerInterval) clearInterval(activeQuizState.timerInterval);
+            document.getElementById('examInterface').classList.add('hidden');
+            document.getElementById('gformResultInterface').classList.remove('hidden');
+
+            document.getElementById('gfCertStudentName').innerText = activeQuizState.activeStudent.name;
+            document.getElementById('gfCertStudentClass').innerText = activeQuizState.activeStudent.class;
+            document.getElementById('gfCertSubject').innerText = activeQuizState.activeStudent.subject;
+
+            const submissionData = {
+                id: 'ATT-' + Math.random().toString(36).substr(2,6).toUpperCase(),
+                name: activeQuizState.activeStudent.name,
+                class: activeQuizState.activeStudent.class,
+                subject: activeQuizState.activeStudent.subject,
+                score: "N/A",
+                total: "N/A",
+                percentage: "N/A",
+                remark: "Results Forwarded",
+                feedback: "Google Form Submission",
+                timestamp: new Date().toLocaleString()
+            };
+
+            const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
+            attempts.unshift(submissionData);
+            saveTableAndSync('ATTEMPTS', attempts);
+            dispatchSubmissionToSheet(submissionData);
+        }
+
+        // --- FOOLPROOF SCORING FIX IMPLEMENTED HERE ---
         function submitStudentExam() {
             if (activeQuizState.timerInterval) clearInterval(activeQuizState.timerInterval);
             let score = 0;
             let total = activeQuizState.questions.length;
 
             activeQuizState.questions.forEach(q => {
-                if (activeQuizState.answers[q.id] && activeQuizState.answers[q.id] === q.correct) {
+                // Directly fetch the selected radio button from the screen
+                const selectedOption = document.querySelector(`input[name="q_${q.id}"]:checked`);
+                const studentAnswer = selectedOption ? selectedOption.value : null;
+                
+                // Clean the correct answer to be perfectly formatted
+                const correctAnswer = String(q.correct).trim().toUpperCase().replace(/[^A-D]/g, '').charAt(0);
+                
+                if (studentAnswer === correctAnswer) {
                     score++;
                 }
             });
 
             let percentage = Math.round((score / total) * 100);
             
-            // Clean remarks without percentages
             let remark = "";
             let feedbackDesc = "";
             
@@ -544,6 +629,7 @@
             document.getElementById('certStudentName').innerText = activeQuizState.activeStudent.name;
             document.getElementById('certStudentClass').innerText = activeQuizState.activeStudent.class;
             document.getElementById('certSubject').innerText = activeQuizState.activeStudent.subject;
+            document.getElementById('certScoreText').innerText = `${score} / ${total}`;
             
             document.getElementById('certRemarkTitle').innerText = remark;
             document.getElementById('certFeedbackDesc').innerText = feedbackDesc;
@@ -610,7 +696,7 @@
         }
 
         function resetStudentSession() {
-            activeQuizState = { questions: [], answers: {}, timerInterval: null, secondsRemaining: 0, activeStudent: null, subject: '', classGroup: '' };
+            activeQuizState = { isGoogleForm: false, formUrl: '', questions: [], timerInterval: null, secondsRemaining: 0, activeStudent: null, subject: '', classGroup: '' };
             renderApp('student');
         }
 
@@ -674,82 +760,128 @@
 
                         <!-- Tab 1: Question Bank & AI Uploader -->
                         <div id="staffTabQuestions" class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
-                            <div class="border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div>
-                                    <h4 class="font-bold text-md text-primary">Upload / Generate Questions</h4>
-                                    <p class="text-xs text-gray-500 mt-1">Upload CSV/Excel templates, PDF/Word docs, or copy/paste raw text.</p>
-                                </div>
-                                <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
-                                    <i class="fas fa-file-excel"></i><span>Download CSV Template</span>
-                                </button>
+                            
+                            <div class="mb-4 flex space-x-4 border-b">
+                                <label class="flex items-center space-x-2 cursor-pointer pb-2 border-b-2 border-primary text-primary" id="tabNativeQuizLbl">
+                                    <input type="radio" name="quizType" value="native" checked onchange="toggleQuizBuilderType()" class="hidden">
+                                    <span class="font-bold text-sm"><i class="fas fa-list-ol mr-1"></i> Native Quiz Builder</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer pb-2 border-b-2 border-transparent text-gray-500" id="tabFormQuizLbl">
+                                    <input type="radio" name="quizType" value="gform" onchange="toggleQuizBuilderType()" class="hidden">
+                                    <span class="font-bold text-sm"><i class="fas fa-link mr-1"></i> Embed Google Form</span>
+                                </label>
                             </div>
 
-                            <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-3">
-                                <h4 class="font-bold text-xs text-purple-900 uppercase flex items-center space-x-2">
-                                    <i class="fas fa-magic text-purple-600"></i>
-                                    <span>AI / Document / Excel Question Importer</span>
-                                </h4>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div id="nativeBuilderBlock" class="space-y-6">
+                                <div class="border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                     <div>
-                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload File (.csv, .txt, .doc, .pdf)</label>
-                                        <input type="file" id="ai-doc-file" accept=".csv,.txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
+                                        <h4 class="font-bold text-md text-primary">Upload / Generate Questions</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Upload CSV templates, PDF/Word docs, or copy/paste raw text.</p>
                                     </div>
-                                    <div class="flex items-end">
-                                        <button type="button" onclick="parseTextIntoQuestions()" class="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">
-                                            <i class="fas fa-robot mr-1"></i> Auto-Generate Questions
-                                        </button>
+                                    <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+                                        <i class="fas fa-file-excel"></i><span>Download CSV Template</span>
+                                    </button>
+                                </div>
+
+                                <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-3">
+                                    <h4 class="font-bold text-xs text-purple-900 uppercase flex items-center space-x-2">
+                                        <i class="fas fa-magic text-purple-600"></i>
+                                        <span>AI / Document / Excel Question Importer</span>
+                                    </h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload File (.csv, .txt, .doc, .pdf)</label>
+                                            <input type="file" id="ai-doc-file" accept=".csv,.txt,.doc,.docx,.pdf" onchange="handleAiDocumentUpload(event)" class="w-full text-xs p-1.5 bg-white border rounded-lg">
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button type="button" onclick="parseTextIntoQuestions()" class="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">
+                                                <i class="fas fa-robot mr-1"></i> Auto-Generate Questions
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / CSV Content Preview</label>
+                                        <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or CSV data here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Raw Text / CSV Content Preview</label>
-                                    <textarea id="ai-raw-text" rows="3" placeholder="Paste questions or CSV data here..." class="w-full p-2 border rounded-lg text-xs bg-white font-mono"></textarea>
-                                </div>
+
+                                <form id="saveQuestionForm" class="space-y-4 pt-2">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Target Class</label>
+                                            <select id="qClass" required class="w-full p-2.5 border rounded-lg">
+                                                ${HAPPY_CLASSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Subject</label>
+                                            <select id="qSubject" required class="w-full p-2.5 border rounded-lg">
+                                                ${HAPPY_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Question Text</label>
+                                        <textarea id="qText" required rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Type question here..."></textarea>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <input type="text" id="optA" placeholder="Option A" required class="p-2.5 border rounded-lg">
+                                        <input type="text" id="optB" placeholder="Option B" required class="p-2.5 border rounded-lg">
+                                        <input type="text" id="optC" placeholder="Option C" required class="p-2.5 border rounded-lg">
+                                        <input type="text" id="optD" placeholder="Option D" required class="p-2.5 border rounded-lg">
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Correct Answer</label>
+                                            <select id="qCorrect" required class="w-full p-2.5 border rounded-lg">
+                                                <option value="A">Option A</option>
+                                                <option value="B">Option B</option>
+                                                <option value="C">Option C</option>
+                                                <option value="D">Option D</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Timer (Minutes)</label>
+                                            <input type="number" id="testTimerMinutes" value="10" min="1" class="w-full p-2.5 border rounded-lg">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Save Question to Bank</button>
+                                </form>
                             </div>
 
-                            <form id="saveQuestionForm" class="space-y-4 pt-2">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium mb-1">Target Class</label>
-                                        <select id="qClass" required class="w-full p-2.5 border rounded-lg">
-                                            ${HAPPY_CLASSES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                                        </select>
+                            <div id="gformBuilderBlock" class="hidden space-y-4">
+                                <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                    <h4 class="font-bold text-xs text-blue-900 uppercase"><i class="fas fa-link mr-1"></i> Embed Google Form Link</h4>
+                                    <p class="text-xs text-slate-600 mt-1">Students will take the exam directly through your Google Form. The app will strictly enforce the timer.</p>
+                                </div>
+                                <form id="saveGFormForm" class="space-y-4">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Target Class</label>
+                                            <select id="gClass" required class="w-full p-2.5 border rounded-lg">
+                                                ${HAPPY_CLASSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Subject</label>
+                                            <select id="gSubject" required class="w-full p-2.5 border rounded-lg">
+                                                ${HAPPY_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium mb-1">Subject</label>
-                                        <select id="qSubject" required class="w-full p-2.5 border rounded-lg">
-                                            ${HAPPY_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Question Text</label>
-                                    <textarea id="qText" required rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Type question here..."></textarea>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <input type="text" id="optA" placeholder="Option A" required class="p-2.5 border rounded-lg">
-                                    <input type="text" id="optB" placeholder="Option B" required class="p-2.5 border rounded-lg">
-                                    <input type="text" id="optC" placeholder="Option C" required class="p-2.5 border rounded-lg">
-                                    <input type="text" id="optD" placeholder="Option D" required class="p-2.5 border rounded-lg">
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium mb-1">Correct Answer</label>
-                                        <select id="qCorrect" required class="w-full p-2.5 border rounded-lg">
-                                            <option value="A">Option A</option>
-                                            <option value="B">Option B</option>
-                                            <option value="C">Option C</option>
-                                            <option value="D">Option D</option>
-                                        </select>
+                                        <label class="block text-sm font-medium mb-1">Google Form Link (URL)</label>
+                                        <input type="url" id="gUrl" required placeholder="https://docs.google.com/forms/d/e/.../viewform" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium mb-1">Timer (Minutes)</label>
-                                        <input type="number" id="testTimerMinutes" value="10" min="1" class="w-full p-2.5 border rounded-lg">
+                                        <label class="block text-sm font-medium mb-1">Timer Limit (Minutes)</label>
+                                        <input type="number" id="gTimer" required value="10" min="1" class="w-full p-2.5 border rounded-lg">
                                     </div>
-                                </div>
-                                <button type="submit" class="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-purple-800 transition">Save Question to Bank</button>
-                            </form>
+                                    <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Save Google Form to Bank</button>
+                                </form>
+                            </div>
 
-                            <div class="pt-4 border-t">
+                            <div class="pt-4 border-t mt-4">
                                 <h5 class="font-semibold text-sm text-gray-700 mb-2">Existing Question Bank Items</h5>
                                 <div id="questionListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
                             </div>
@@ -857,6 +989,25 @@
             `;
         }
 
+        function toggleQuizBuilderType() {
+            const type = document.querySelector('input[name="quizType"]:checked').value;
+            if (type === 'native') {
+                document.getElementById('nativeBuilderBlock').classList.remove('hidden');
+                document.getElementById('gformBuilderBlock').classList.add('hidden');
+                document.getElementById('tabNativeQuizLbl').classList.replace('border-transparent', 'border-primary');
+                document.getElementById('tabNativeQuizLbl').classList.replace('text-gray-500', 'text-primary');
+                document.getElementById('tabFormQuizLbl').classList.replace('border-primary', 'border-transparent');
+                document.getElementById('tabFormQuizLbl').classList.replace('text-primary', 'text-gray-500');
+            } else {
+                document.getElementById('nativeBuilderBlock').classList.add('hidden');
+                document.getElementById('gformBuilderBlock').classList.remove('hidden');
+                document.getElementById('tabFormQuizLbl').classList.replace('border-transparent', 'border-primary');
+                document.getElementById('tabFormQuizLbl').classList.replace('text-gray-500', 'text-primary');
+                document.getElementById('tabNativeQuizLbl').classList.replace('border-primary', 'border-transparent');
+                document.getElementById('tabNativeQuizLbl').classList.replace('text-primary', 'text-gray-500');
+            }
+        }
+
         function downloadExcelTemplate() {
             const csvContent = "data:text/csv;charset=utf-8," + 
                 "Class,Subject,Question,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,TimerMinutes\n" +
@@ -921,6 +1072,28 @@
                     saveTableAndSync('QUESTIONS', questions);
                     showToast("Success", "Question successfully added to bank!");
                     saveQForm.reset();
+                    renderQuestionList();
+                });
+            }
+
+            const saveGFormForm = document.getElementById('saveGFormForm');
+            if (saveGFormForm) {
+                saveGFormForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newQ = {
+                        id: generateID(),
+                        type: 'google_form',
+                        class: document.getElementById('gClass').value,
+                        subject: document.getElementById('gSubject').value,
+                        url: document.getElementById('gUrl').value.trim(),
+                        timer: parseInt(document.getElementById('gTimer').value) || 10
+                    };
+                    const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+                    const filtered = questions.filter(q => !(q.type === 'google_form' && q.class === newQ.class && q.subject === newQ.subject));
+                    filtered.push(newQ);
+                    saveTableAndSync('QUESTIONS', filtered);
+                    showToast("Success", "Google Form Linked Successfully!");
+                    saveGFormForm.reset();
                     renderQuestionList();
                 });
             }
@@ -1065,7 +1238,8 @@
                             optB: cols[4],
                             optC: cols[5],
                             optD: cols[6],
-                            correct: (cols[7] || 'A').trim().charAt(0).toUpperCase(),
+                            // Aggressively clean the correct answer to be perfectly valid
+                            correct: (cols[7] || 'A').toString().toUpperCase().replace(/[^A-D]/g, '').charAt(0) || 'A',
                             timer: parseInt(cols[8]) || 10
                         });
                         parsedCount++;
@@ -1141,12 +1315,21 @@
                 return;
             }
             questions.forEach(q => {
-                container.innerHTML += `
-                    <div class="flex justify-between items-center p-2 bg-gray-50 border rounded text-xs">
-                        <div><b>[${q.class} - ${q.subject}]</b> ${q.text.substring(0, 50)}... (Correct: ${q.correct})</div>
-                        <button onclick="deleteQuestion('${q.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Delete</button>
-                    </div>
-                `;
+                if (q.type === 'google_form') {
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                            <div><b class="text-blue-900">[${q.class} - ${q.subject}]</b> Google Form Embedded (${q.timer} mins)</div>
+                            <button onclick="deleteQuestion('${q.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Delete</button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-gray-50 border rounded text-xs">
+                            <div><b>[${q.class} - ${q.subject}]</b> ${q.text.substring(0, 50)}... (Correct: ${q.correct})</div>
+                            <button onclick="deleteQuestion('${q.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Delete</button>
+                        </div>
+                    `;
+                }
             });
         }
 
