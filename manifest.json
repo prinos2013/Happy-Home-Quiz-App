@@ -2,7 +2,7 @@
   "name": "Happy Home Quiz App",
   "short_name": "Quiz App",
   "description": "Happy Home Preparatory School Quiz Portal",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#6A0DAD",
