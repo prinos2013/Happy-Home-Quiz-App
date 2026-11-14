@@ -1,9 +1,9 @@
-const CACHE_NAME = 'happy-home-quiz-v1';
+const CACHE_NAME = 'happy-home-quiz-v2';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/logo.png',
-  '/manifest.json'
+  './',
+  './index.html',
+  './logo.png',
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {
