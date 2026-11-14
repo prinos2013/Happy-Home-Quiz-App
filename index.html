@@ -47,20 +47,6 @@
         </div>
     </div>
 
-    <!-- Custom Modal Container -->
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
-            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
-            </div>
-            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
-            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-grow flex flex-col">
         <!-- Dynamic views injected here -->
@@ -86,20 +72,20 @@
         const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v15',
-            TEACHERS: 'happyhome_quiz_teachers_v15',
-            QUESTIONS: 'happyhome_quiz_questions_v15',
-            ATTEMPTS: 'happyhome_quiz_attempts_v15',
-            CURRENT_USER: 'happyhome_quiz_current_user_v15',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v15',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v15'
+            SETTINGS: 'happyhome_quiz_settings_v16',
+            TEACHERS: 'happyhome_quiz_teachers_v16',
+            QUESTIONS: 'happyhome_quiz_questions_v16',
+            ATTEMPTS: 'happyhome_quiz_attempts_v16',
+            CURRENT_USER: 'happyhome_quiz_current_user_v16',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v16',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v16'
         };
 
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
             QUESTIONS: DB_KEYS.QUESTIONS,
-            ATTEMPTS: DB_KEYS.ATTEMPTS // Re-added so app devices can pull submissions
+            ATTEMPTS: DB_KEYS.ATTEMPTS
         };
 
         const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
@@ -394,11 +380,10 @@
                             <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">${s.schoolName}, ${s.location}</h4>
                             <p class="text-[10px] text-gray-400 italic">Motto: ${s.motto}</p>
                             
-                            <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">ASSESSMENT REPORT</h2>
-                            <p class="text-xs text-gray-500 mt-4 uppercase tracking-widest">Candidate:</p>
+                            <h2 class="text-lg font-bold text-slate-700 mt-3 font-serif uppercase tracking-widest">Assessment Report</h2>
                             
                             <!-- Enlarged Student Name -->
-                            <h2 id="certStudentName" class="text-2xl font-black text-primary underline my-1">Student Name</h2>
+                            <h2 id="certStudentName" class="text-4xl font-black text-primary underline my-3">Student Name</h2>
                             
                             <p class="text-xs text-gray-600">Class: <b id="certStudentClass">Basic 6</b></p>
                             <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
@@ -409,7 +394,7 @@
                             <p id="certScoreText" class="text-3xl font-black text-primary leading-none">0 / 0</p>
                             
                             <div class="mt-4 pt-4 border-t border-purple-200">
-                                <h2 id="certRemarkTitle" class="text-2xl font-black text-red-600 uppercase font-serif tracking-wide">Excellent</h2>
+                                <h2 id="certRemarkTitle" class="text-4xl font-black text-red-600 uppercase font-serif tracking-wide">Excellent</h2>
                                 <p id="certFeedbackDesc" class="text-xs text-gray-600 mt-2 font-semibold bg-white p-2 rounded border border-gray-200 shadow-sm">
                                     Exceptional understanding demonstrated across all tasks.
                                 </p>
@@ -842,6 +827,7 @@
                                         <div class="flex gap-2">
                                             <button type="button" onclick="saveCloudUrlSetting()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Save Cloud URL</button>
                                             <button type="button" onclick="pushAllTablesToCloud(true)" class="py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Push Data</button>
+                                            <button type="button" onclick="pullFromCloud(true)" class="py-2 px-3 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Pull Data</button>
                                         </div>
                                     </div>
                                 </div>
