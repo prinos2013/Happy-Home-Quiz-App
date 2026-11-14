@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#6A0DAD">
     <script>
         tailwind.config = {
@@ -73,19 +72,20 @@
         const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v13',
-            TEACHERS: 'happyhome_quiz_teachers_v13',
-            QUESTIONS: 'happyhome_quiz_questions_v13',
-            ATTEMPTS: 'happyhome_quiz_attempts_v13',
-            CURRENT_USER: 'happyhome_quiz_current_user_v13',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v13',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v13'
+            SETTINGS: 'happyhome_quiz_settings_v14',
+            TEACHERS: 'happyhome_quiz_teachers_v14',
+            QUESTIONS: 'happyhome_quiz_questions_v14',
+            ATTEMPTS: 'happyhome_quiz_attempts_v14',
+            CURRENT_USER: 'happyhome_quiz_current_user_v14',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v14',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v14'
         };
 
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
-            QUESTIONS: DB_KEYS.QUESTIONS
+            QUESTIONS: DB_KEYS.QUESTIONS,
+            ATTEMPTS: DB_KEYS.ATTEMPTS // Re-added so app devices can pull submissions
         };
 
         const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
@@ -114,9 +114,6 @@
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    }
                     deferredPrompt = null;
                     const installBtn = document.getElementById('installAppBtn');
                     if (installBtn) installBtn.classList.add('hidden');
@@ -310,6 +307,7 @@
             setCloudBadgeStatus(getCloudSyncUrl() ? 'synced' : 'local', getCloudSyncUrl() ? 'Cloud Synced' : 'Offline Mode');
         }
 
+        // --- STUDENT PORTAL VIEW ---
         function getStudentPortalHTML() {
             const s = getSettings();
             return `
@@ -375,6 +373,7 @@
                         </div>
                     </div>
 
+                    <!-- Step 3: Immediate Performance Result Display -->
                     <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-5 relative overflow-hidden">
                         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800"></div>
                         <div>
@@ -384,14 +383,19 @@
                             <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
                             <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
                         </div>
-                        <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto space-y-2">
-                            <p class="text-xs uppercase tracking-wider font-bold text-purple-900">Final Score & Performance Feedback</p>
-                            <p id="certScoreText" class="text-3xl font-black text-primary">0 / 0</p>
-                            <p id="certPercentageText" class="text-sm font-bold text-gray-700">0%</p>
-                            <div id="certFeedbackBox" class="p-3 bg-white text-purple-900 rounded-lg text-xs font-semibold shadow-sm border border-purple-200 text-left">
-                                Assessment performance description goes here...
+                        
+                        <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 max-w-sm mx-auto">
+                            <p class="text-xs uppercase tracking-wider font-bold text-purple-900 mb-1">Final Score</p>
+                            <p id="certScoreText" class="text-3xl font-black text-primary leading-none">0 / 0</p>
+                            
+                            <div class="mt-4 pt-4 border-t border-purple-200">
+                                <h2 id="certRemarkTitle" class="text-2xl font-black text-red-600 uppercase font-serif tracking-wide">Excellent</h2>
+                                <p id="certFeedbackDesc" class="text-xs text-gray-600 mt-2 font-semibold bg-white p-2 rounded border border-gray-200 shadow-sm">
+                                    Exceptional understanding demonstrated across all tasks.
+                                </p>
                             </div>
                         </div>
+
                         <div class="pt-2 flex flex-col sm:flex-row gap-2 no-print">
                             <button onclick="window.print()" class="flex-1 py-2.5 bg-purple-700 text-white font-semibold rounded-lg hover:bg-purple-800 transition text-xs flex items-center justify-center space-x-2">
                                 <i class="fas fa-print"></i><span>Print Results</span>
@@ -485,12 +489,27 @@
             });
 
             let percentage = Math.round((score / total) * 100);
-            let feedback = "";
-            if (percentage >= 80) feedback = "80% - 100% (Excellent): Exceptional understanding demonstrated across all tasks.";
-            else if (percentage >= 70) feedback = "70% - 79% (Very Good): Displays a very strong grasp of coursework.";
-            else if (percentage >= 60) feedback = "60% - 69% (Good): Shows steady academic progress and effort.";
-            else if (percentage >= 50) feedback = "50% - 59% (Satisfactory): Meets the fundamental requirements of the course.";
-            else feedback = "Below 50%, Needs Improvement: \"Requires more focused effort to meet fundamental learning goals.\"";
+            
+            // Generate clean remarks and feedback
+            let remark = "";
+            let feedbackDesc = "";
+            
+            if (percentage >= 80) {
+                remark = "Excellent";
+                feedbackDesc = "Exceptional understanding demonstrated across all tasks.";
+            } else if (percentage >= 70) {
+                remark = "Very Good";
+                feedbackDesc = "Displays a very strong grasp of coursework.";
+            } else if (percentage >= 60) {
+                remark = "Good";
+                feedbackDesc = "Shows steady academic progress and effort.";
+            } else if (percentage >= 50) {
+                remark = "Satisfactory";
+                feedbackDesc = "Meets the fundamental requirements of the course.";
+            } else {
+                remark = "Needs Improvement";
+                feedbackDesc = "Requires more focused effort to meet fundamental learning goals.";
+            }
 
             document.getElementById('examInterface').classList.add('hidden');
             document.getElementById('resultInterface').classList.remove('hidden');
@@ -499,8 +518,9 @@
             document.getElementById('certStudentClass').innerText = activeQuizState.activeStudent.class;
             document.getElementById('certSubject').innerText = activeQuizState.activeStudent.subject;
             document.getElementById('certScoreText').innerText = `${score} / ${total}`;
-            document.getElementById('certPercentageText').innerText = `${percentage}% Score`;
-            document.getElementById('certFeedbackBox').innerText = feedback;
+            
+            document.getElementById('certRemarkTitle').innerText = remark;
+            document.getElementById('certFeedbackDesc').innerText = feedbackDesc;
 
             const submissionData = {
                 id: 'ATT-' + Math.random().toString(36).substr(2,6).toUpperCase(),
@@ -510,14 +530,17 @@
                 score: score,
                 total: total,
                 percentage: percentage,
-                feedback: feedback,
+                remark: remark,
+                feedback: feedbackDesc,
                 timestamp: new Date().toLocaleString()
             };
 
+            // Save to global DB attempts (this allows cross device pulling for teachers)
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             attempts.unshift(submissionData);
-            localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify(attempts));
+            saveTableAndSync('ATTEMPTS', attempts);
             
+            // Also append directly to the class worksheet explicitly via Apps Script
             dispatchSubmissionToSheet(submissionData);
         }
 
@@ -613,13 +636,14 @@
                         <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
                             <div>
                                 <h3 id="welcomeStaffText" class="font-bold text-lg text-primary">Welcome ${currentUser ? currentUser.name : 'Staff'} (${currentUser ? currentUser.role.toUpperCase() : ''})</h3>
-                                <p class="text-xs text-gray-500">Manage question banks, AI generators, teachers, and security settings across devices.</p>
+                                <p class="text-xs text-gray-500">Manage question banks, view submissions, and configure settings.</p>
                             </div>
                             <button onclick="handleTeacherLogout()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition">Logout</button>
                         </div>
 
                         <div class="flex flex-wrap gap-2 border-b pb-2">
                             <button onclick="switchStaffTab('questions')" id="tabQBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition">Question Bank & AI</button>
+                            <button onclick="switchStaffTab('results')" id="tabRBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Student Results</button>
                             <button onclick="switchStaffTab('teachers')" id="tabTBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition ${isAdmin ? '' : 'hidden'}">Manage Teachers</button>
                             <button onclick="switchStaffTab('settings')" id="tabSBtn" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-gray-100 text-gray-600 rounded-lg transition">Change Password</button>
                         </div>
@@ -628,11 +652,11 @@
                         <div id="staffTabQuestions" class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
                             <div class="border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>
-                                    <h4 class="font-bold text-md text-primary">Upload / Generate Questions (Excel, AI & Material Import)</h4>
+                                    <h4 class="font-bold text-md text-primary">Upload / Generate Questions</h4>
                                     <p class="text-xs text-gray-500 mt-1">Upload CSV/Excel templates, PDF/Word docs, or copy/paste raw text.</p>
                                 </div>
                                 <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
-                                    <i class="fas fa-file-excel"></i><span>Download Excel/CSV Template</span>
+                                    <i class="fas fa-file-excel"></i><span>Download CSV Template</span>
                                 </button>
                             </div>
 
@@ -641,7 +665,6 @@
                                     <i class="fas fa-magic text-purple-600"></i>
                                     <span>AI / Document / Excel Question Importer</span>
                                 </h4>
-                                <p class="text-xs text-slate-600">Upload an Excel/CSV file (.csv), study document, or paste raw text below to auto-extract questions.</p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-700 mb-1">Upload File (.csv, .txt, .doc, .pdf)</label>
@@ -708,7 +731,38 @@
                             </div>
                         </div>
 
-                        <!-- Tab 2: Manage Teachers -->
+                        <!-- Tab 2: Student Results (Filtered by Teacher) -->
+                        <div id="staffTabResults" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <h4 class="font-bold text-md text-primary">Student Submissions</h4>
+                                    <p class="text-xs text-gray-500">Showing recent attempts for your assigned classes.</p>
+                                </div>
+                                <button onclick="pullFromCloud(true)" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow hover:bg-blue-700 transition">
+                                    <i class="fas fa-sync-alt mr-1"></i> Sync Results
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                    <thead>
+                                        <tr class="bg-slate-100 text-slate-700 text-[11px] uppercase tracking-wider">
+                                            <th class="p-2 border font-semibold">Date</th>
+                                            <th class="p-2 border font-semibold">Name</th>
+                                            <th class="p-2 border font-semibold">Class</th>
+                                            <th class="p-2 border font-semibold">Subject</th>
+                                            <th class="p-2 border font-semibold">Score</th>
+                                            <th class="p-2 border font-semibold">Remark</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacherResultsTableBody" class="text-xs text-slate-600 bg-white">
+                                        <!-- Dynamically generated based on assigned classes -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Manage Teachers -->
                         <div id="staffTabTeachers" class="${isAdmin ? '' : 'hidden'} bg-white p-6 rounded-xl shadow-sm border space-y-4">
                             <h4 class="font-bold text-md text-primary">Create Teachers & Assign One or More Classes (Admin Only)</h4>
                             <form id="createTeacherForm" class="space-y-4 border-b pb-6">
@@ -738,7 +792,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab 3: Settings -->
+                        <!-- Tab 4: Settings -->
                         <div id="staffTabSettings" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-6 max-w-lg">
                             <div>
                                 <h4 class="font-bold text-md text-primary mb-3">Change Your Password</h4>
@@ -768,7 +822,6 @@
                                         <div class="flex gap-2">
                                             <button type="button" onclick="saveCloudUrlSetting()" class="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Save Cloud URL</button>
                                             <button type="button" onclick="pushAllTablesToCloud(true)" class="py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Push Data</button>
-                                            <button type="button" onclick="pullFromCloud(true)" class="py-2 px-3 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Pull Data</button>
                                         </div>
                                     </div>
                                 </div>
@@ -929,6 +982,7 @@
 
             renderQuestionList();
             renderTeacherList();
+            renderTeacherResults(); // Populate results table
         }
 
         function handleTeacherLogout() {
@@ -937,7 +991,7 @@
         }
 
         function switchStaffTab(tab) {
-            ['questions', 'teachers', 'settings'].forEach(t => {
+            ['questions', 'results', 'teachers', 'settings'].forEach(t => {
                 const el = document.getElementById(`staffTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 const btn = document.getElementById(`tab${t.charAt(0).toUpperCase()}Btn`);
                 if (el) el.classList.add('hidden');
@@ -1076,6 +1130,43 @@
             questions = questions.filter(q => q.id !== id);
             saveTableAndSync('QUESTIONS', questions);
             renderQuestionList();
+        }
+
+        // Feature: Render Teacher Submissions List
+        function renderTeacherResults() {
+            const container = document.getElementById('teacherResultsTableBody');
+            if (!container) return;
+            const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
+            const currentUser = getCurrentUser();
+            
+            // Filter by assigned classes unless they are an admin
+            let filteredAttempts = attempts;
+            if (currentUser && currentUser.role !== 'admin' && !currentUser.assignedClasses.includes('All Classes')) {
+                filteredAttempts = attempts.filter(a => currentUser.assignedClasses.includes(a.class));
+            }
+
+            container.innerHTML = "";
+            if (filteredAttempts.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">No submissions found for your classes.</td></tr>`;
+                return;
+            }
+
+            filteredAttempts.forEach(a => {
+                let remarkColor = "text-green-600";
+                if (a.remark === "Needs Improvement") remarkColor = "text-red-600";
+                if (a.remark === "Satisfactory") remarkColor = "text-amber-600";
+
+                container.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50 transition">
+                        <td class="p-2 border whitespace-nowrap">${a.timestamp.split(',')[0]}</td>
+                        <td class="p-2 border font-bold text-primary">${a.name}</td>
+                        <td class="p-2 border">${a.class}</td>
+                        <td class="p-2 border">${a.subject}</td>
+                        <td class="p-2 border font-bold">${a.score}/${a.total} (${a.percentage}%)</td>
+                        <td class="p-2 border font-bold ${remarkColor}">${a.remark}</td>
+                    </tr>
+                `;
+            });
         }
 
         function renderTeacherList() {
