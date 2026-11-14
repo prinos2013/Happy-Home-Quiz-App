@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#6A0DAD">
     <script>
         tailwind.config = {
@@ -47,20 +48,6 @@
         </div>
     </div>
 
-    <!-- Custom Modal Container -->
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
-            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
-            </div>
-            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
-            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-grow flex flex-col">
         <!-- Dynamic views injected here -->
@@ -83,19 +70,18 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
+        const DEFAULT_CLOUD_SYNC_URL = ""; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v12',
-            TEACHERS: 'happyhome_quiz_teachers_v12',
-            QUESTIONS: 'happyhome_quiz_questions_v12',
-            ATTEMPTS: 'happyhome_quiz_attempts_v12',
-            CURRENT_USER: 'happyhome_quiz_current_user_v12',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v12',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v12'
+            SETTINGS: 'happyhome_quiz_settings_v13',
+            TEACHERS: 'happyhome_quiz_teachers_v13',
+            QUESTIONS: 'happyhome_quiz_questions_v13',
+            ATTEMPTS: 'happyhome_quiz_attempts_v13',
+            CURRENT_USER: 'happyhome_quiz_current_user_v13',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v13',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v13'
         };
 
-        // EXCLUDED ATTEMPTS from TABLE_KEY_MAP so it doesn't get synced as raw JSON text
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
@@ -115,6 +101,36 @@
             classGroup: ''
         };
 
+        // --- PWA Installation Logic ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('installAppBtn');
+            if (installBtn) installBtn.classList.remove('hidden');
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    const installBtn = document.getElementById('installAppBtn');
+                    if (installBtn) installBtn.classList.add('hidden');
+                });
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed:', err));
+            });
+        }
+
+        // --- App Logic ---
         function getCloudSyncUrl() {
             const s = getSettings();
             return (s.cloudSyncUrl && s.cloudSyncUrl.trim() !== '') 
@@ -264,22 +280,6 @@
             setTimeout(() => toast.classList.add('translate-x-full'), 3500);
         }
 
-        function openModal(title, bodyHTML, footerHTML = null) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerHTML = bodyHTML;
-            const footer = document.getElementById('modal-footer');
-            if (footerHTML) {
-                footer.innerHTML = footerHTML;
-            } else {
-                footer.innerHTML = `<button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>`;
-            }
-            document.getElementById('custom-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('custom-modal').classList.add('hidden');
-        }
-
         function getCurrentUser() {
             const raw = localStorage.getItem(DB_KEYS.CURRENT_USER);
             return raw ? JSON.parse(raw) : null;
@@ -310,7 +310,6 @@
             setCloudBadgeStatus(getCloudSyncUrl() ? 'synced' : 'local', getCloudSyncUrl() ? 'Cloud Synced' : 'Offline Mode');
         }
 
-        // --- STUDENT PORTAL VIEW ---
         function getStudentPortalHTML() {
             const s = getSettings();
             return `
@@ -324,6 +323,9 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
+                            <button id="installAppBtn" onclick="installPWA()" class="hidden px-3 py-1.5 text-xs sm:text-sm bg-yellow-400 text-yellow-900 font-bold rounded shadow transition hover:bg-yellow-300">
+                                <i class="fas fa-download mr-1"></i> Install App
+                            </button>
                             <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Student Portal</button>
                             <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Teacher/Admin</button>
                         </div>
@@ -418,10 +420,8 @@
                     return;
                 }
 
-                // Shuffle and pick exactly 10 questions max
                 matchingQuestions.sort(() => Math.random() - 0.5);
                 activeQuizState.questions = matchingQuestions.slice(0, 10);
-
                 activeQuizState.activeStudent = { name, class: sClass, subject };
                 activeQuizState.answers = {};
 
@@ -514,12 +514,10 @@
                 timestamp: new Date().toLocaleString()
             };
 
-            // Save locally ONLY (Do not trigger universal table sync for submissions)
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             attempts.unshift(submissionData);
             localStorage.setItem(DB_KEYS.ATTEMPTS, JSON.stringify(attempts));
             
-            // Dispatch to sheet directly for nice row formatting
             dispatchSubmissionToSheet(submissionData);
         }
 
@@ -585,6 +583,9 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
+                            <button id="installAppBtn" onclick="installPWA()" class="hidden px-3 py-1.5 text-xs sm:text-sm bg-yellow-400 text-yellow-900 font-bold rounded shadow transition hover:bg-yellow-300">
+                                <i class="fas fa-download mr-1"></i> Install App
+                            </button>
                             <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Student Portal</button>
                             <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Teacher/Admin</button>
                         </div>
@@ -840,7 +841,7 @@
                     const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
                     questions.push(newQ);
                     saveTableAndSync('QUESTIONS', questions);
-                    alert("Question successfully added to bank!");
+                    showToast("Success", "Question successfully added to bank!");
                     saveQForm.reset();
                     renderQuestionList();
                 });
@@ -875,7 +876,7 @@
 
                     teachers.push({ id: 'TCH-' + Date.now(), name, assignedClasses, username, pass, role: "teacher" });
                     saveTableAndSync('TEACHERS', teachers);
-                    alert("Teacher account created and classes assigned successfully!");
+                    showToast("Success", "Teacher account created and classes assigned successfully!");
                     createTForm.reset();
                     renderTeacherList();
                 });
@@ -902,7 +903,7 @@
                         const s = getSettings();
                         s.adminPasscode = newP;
                         saveTableAndSync('SETTINGS', s);
-                        alert("Admin password updated successfully!");
+                        showToast("Success", "Admin password updated successfully!");
                         changePassForm.reset();
                         return;
                     }
@@ -921,7 +922,7 @@
                     const updatedTeachers = teachers.map(t => t.username === currentUser.username ? currentUser : t);
                     saveTableAndSync('TEACHERS', updatedTeachers);
                     localStorage.setItem(DB_KEYS.CURRENT_USER, JSON.stringify(currentUser));
-                    alert("Password updated successfully!");
+                    showToast("Success", "Password updated successfully!");
                     changePassForm.reset();
                 });
             }
@@ -1095,11 +1096,12 @@
         }
 
         function deleteTeacher(teacherId) {
+            if (!confirm("Are you sure you want to remove this teacher?")) return;
             let teachers = JSON.parse(localStorage.getItem(DB_KEYS.TEACHERS) || '[]');
             teachers = teachers.filter(t => t.id !== teacherId);
             saveTableAndSync('TEACHERS', teachers);
             renderTeacherList();
-            alert("Teacher removed successfully.");
+            showToast("Success", "Teacher removed successfully.");
         }
 
         function saveCloudUrlSetting() {
