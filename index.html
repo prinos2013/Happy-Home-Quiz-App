@@ -790,7 +790,7 @@
                                         <p class="text-xs text-gray-500 mt-1">Upload CSV templates, PDF/Word docs, or copy/paste raw text.</p>
                                     </div>
                                     <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
-                                        <i class="fas fa-file-excel"></i><span>Download CSV Template</span>
+                                        <i class="fas fa-file-excel"></i><span>Download Empty CSV Template</span>
                                     </button>
                                 </div>
 
@@ -900,26 +900,35 @@
 
                         <!-- Tab 2: Student Results (Filtered by Teacher) -->
                         <div id="staffTabResults" class="hidden bg-white p-6 rounded-xl shadow-sm border space-y-4">
-                            <div class="flex justify-between items-center mb-2">
+                            <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
                                 <div>
                                     <h4 class="font-bold text-md text-primary">Student Submissions</h4>
-                                    <p class="text-xs text-gray-500">Showing recent attempts for your assigned classes.</p>
+                                    <p class="text-xs text-gray-500">Teachers can manage submissions for their assigned classes. Administrators can manage all submissions.</p>
                                 </div>
-                                <button onclick="pullFromCloud(true)" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow hover:bg-blue-700 transition">
-                                    <i class="fas fa-sync-alt mr-1"></i> Sync Results
-                                </button>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button id="deleteSelectedSubmissionsBtn" type="button" onclick="deleteSelectedStudentSubmissions()" disabled class="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-bold shadow hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                        <i class="fas fa-trash-alt mr-1"></i> Delete Selected (0)
+                                    </button>
+                                    <button onclick="pullFromCloud(true)" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow hover:bg-blue-700 transition">
+                                        <i class="fas fa-sync-alt mr-1"></i> Sync Results
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                <table class="w-full text-left border-collapse min-w-[760px]">
                                     <thead>
                                         <tr class="bg-slate-100 text-slate-700 text-[11px] uppercase tracking-wider">
+                                            <th class="p-2 border font-semibold text-center">
+                                                <input id="selectAllSubmissions" type="checkbox" aria-label="Select all visible submissions" onchange="toggleAllStudentSubmissions(this.checked)" class="w-4 h-4 accent-purple-700">
+                                            </th>
                                             <th class="p-2 border font-semibold">Date</th>
                                             <th class="p-2 border font-semibold">Name</th>
                                             <th class="p-2 border font-semibold">Class</th>
                                             <th class="p-2 border font-semibold">Subject</th>
                                             <th class="p-2 border font-semibold">Score</th>
                                             <th class="p-2 border font-semibold">Remark</th>
+                                            <th class="p-2 border font-semibold text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="teacherResultsTableBody" class="text-xs text-slate-600 bg-white">
@@ -1020,17 +1029,21 @@
         }
 
         function downloadExcelTemplate() {
-            const csvContent = "data:text/csv;charset=utf-8," + 
-                "Class,Subject,Question,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,TimerMinutes\n" +
-                "Basic 6,Mathematics,What is 5 + 5?,5,10,15,20,B,10\n" +
-                "Basic 6,English Language,Choose the noun.,Run,Fast,Book,Quick,C,10";
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "HappyHome_Quiz_Template.csv");
+            // Header-only template: teachers enter their own classes, subjects, questions and answers.
+            const headers = [
+                'Class', 'Subject', 'Question', 'OptionA', 'OptionB',
+                'OptionC', 'OptionD', 'CorrectAnswer', 'TimerMinutes'
+            ];
+            const csvContent = '\uFEFF' + headers.join(',') + '\r\n';
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'HappyHome_Quiz_Template_Empty.csv';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
         }
 
         function attachStaffPortalListeners() {
@@ -1581,40 +1594,131 @@
             renderQuestionList();
         }
 
+        function canManageStudentSubmission(user, attempt) {
+            if (!user || !attempt) return false;
+            if (user.role === 'admin') return true;
+            if (user.role !== 'teacher') return false;
+
+            const assignedClasses = Array.isArray(user.assignedClasses)
+                ? user.assignedClasses.map(value => String(value).trim().toLowerCase())
+                : [];
+            const attemptClass = String(attempt.class || '').trim().toLowerCase();
+            return assignedClasses.includes('all classes') || (!!attemptClass && assignedClasses.includes(attemptClass));
+        }
+
+        function updateStudentSubmissionSelectionUI() {
+            const checkboxes = Array.from(document.querySelectorAll('.student-submission-checkbox'));
+            const selectedCount = checkboxes.filter(input => input.checked).length;
+            const deleteButton = document.getElementById('deleteSelectedSubmissionsBtn');
+            const selectAll = document.getElementById('selectAllSubmissions');
+
+            if (deleteButton) {
+                deleteButton.disabled = selectedCount === 0;
+                deleteButton.innerHTML = `<i class="fas fa-trash-alt mr-1"></i> Delete Selected (${selectedCount})`;
+            }
+            if (selectAll) {
+                selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+                selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+            }
+        }
+
+        function toggleAllStudentSubmissions(checked) {
+            document.querySelectorAll('.student-submission-checkbox').forEach(input => {
+                input.checked = !!checked;
+            });
+            updateStudentSubmissionSelectionUI();
+        }
+
+        function deleteStudentSubmission(attemptIndex) {
+            const currentUser = getCurrentUser();
+            const index = Number(attemptIndex);
+            const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
+
+            if (!Number.isInteger(index) || index < 0 || index >= attempts.length) {
+                showToast('Submission Not Found', 'Refresh the results list and try again.', true);
+                return;
+            }
+            if (!canManageStudentSubmission(currentUser, attempts[index])) {
+                showToast('Permission Denied', 'You can only delete submissions from your assigned classes.', true);
+                return;
+            }
+            if (!confirm(`Delete the submission for ${attempts[index].name || 'this student'}? This action cannot be undone.`)) return;
+
+            attempts.splice(index, 1);
+            saveTableAndSync('ATTEMPTS', attempts);
+            renderTeacherResults();
+            showToast('Submission Deleted', 'The student submission has been removed.');
+        }
+
+        function deleteSelectedStudentSubmissions() {
+            const currentUser = getCurrentUser();
+            const selectedInputs = Array.from(document.querySelectorAll('.student-submission-checkbox:checked'));
+            const selectedIndices = [...new Set(selectedInputs.map(input => Number(input.value)))];
+
+            if (selectedIndices.length === 0) {
+                showToast('Nothing Selected', 'Select at least one submission to delete.', true);
+                return;
+            }
+
+            const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
+            const validIndices = selectedIndices.filter(index =>
+                Number.isInteger(index) && index >= 0 && index < attempts.length
+            );
+            if (validIndices.length !== selectedIndices.length ||
+                validIndices.some(index => !canManageStudentSubmission(currentUser, attempts[index]))) {
+                showToast('Permission Denied', 'One or more selected submissions are outside your assigned classes. Refresh and try again.', true);
+                return;
+            }
+
+            if (!confirm(`Delete ${validIndices.length} selected student submission(s)? This action cannot be undone.`)) return;
+
+            const indicesToDelete = new Set(validIndices);
+            const remainingAttempts = attempts.filter((attempt, index) => !indicesToDelete.has(index));
+            saveTableAndSync('ATTEMPTS', remainingAttempts);
+            renderTeacherResults();
+            showToast('Submissions Deleted', `${validIndices.length} student submission(s) have been removed.`);
+        }
+
         function renderTeacherResults() {
             const container = document.getElementById('teacherResultsTableBody');
             if (!container) return;
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             const currentUser = getCurrentUser();
-            
-            let filteredAttempts = attempts;
-            if (currentUser && currentUser.role !== 'admin' && !currentUser.assignedClasses.includes('All Classes')) {
-                filteredAttempts = attempts.filter(a => currentUser.assignedClasses.includes(a.class));
-            }
+
+            // Keep the original array index so deletion targets the exact stored record.
+            const visibleAttempts = attempts
+                .map((attempt, index) => ({ attempt, index }))
+                .filter(item => canManageStudentSubmission(currentUser, item.attempt));
 
             container.innerHTML = "";
-            if (filteredAttempts.length === 0) {
-                container.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">No submissions found for your classes.</td></tr>`;
+            if (visibleAttempts.length === 0) {
+                container.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400">No submissions found for your assigned classes.</td></tr>`;
+                updateStudentSubmissionSelectionUI();
                 return;
             }
 
-            filteredAttempts.forEach(a => {
+            visibleAttempts.forEach(({ attempt: a, index }) => {
                 let remarkColor = "text-green-600";
                 if (a.remark === "Needs Improvement") remarkColor = "text-red-600";
                 if (a.remark === "Satisfactory") remarkColor = "text-amber-600";
                 if (a.remark === "Results Forwarded") remarkColor = "text-blue-600";
+                const dateText = String(a.timestamp || '').split(',')[0] || '—';
+                const scoreText = a.score !== 'N/A' ? `${a.score}/${a.total} (${a.percentage}%)` : 'N/A';
 
                 container.innerHTML += `
                     <tr class="border-b hover:bg-slate-50 transition">
-                        <td class="p-2 border whitespace-nowrap">${a.timestamp.split(',')[0]}</td>
-                        <td class="p-2 border font-bold text-primary">${a.name}</td>
-                        <td class="p-2 border">${a.class}</td>
-                        <td class="p-2 border">${a.subject}</td>
-                        <td class="p-2 border font-bold">${a.score !== 'N/A' ? a.score + '/' + a.total + ' (' + a.percentage + '%)' : 'N/A'}</td>
-                        <td class="p-2 border font-bold ${remarkColor}">${a.remark}</td>
+                        <td class="p-2 border text-center"><input type="checkbox" class="student-submission-checkbox w-4 h-4 accent-purple-700" value="${index}" aria-label="Select submission for ${String(a.name || 'student').replace(/&/g, '&amp;').replace(/"/g, '&quot;') }" onchange="updateStudentSubmissionSelectionUI()"></td>
+                        <td class="p-2 border whitespace-nowrap">${dateText}</td>
+                        <td class="p-2 border font-bold text-primary">${a.name || '—'}</td>
+                        <td class="p-2 border">${a.class || '—'}</td>
+                        <td class="p-2 border">${a.subject || '—'}</td>
+                        <td class="p-2 border font-bold">${scoreText}</td>
+                        <td class="p-2 border font-bold ${remarkColor}">${a.remark || '—'}</td>
+                        <td class="p-2 border text-center"><button type="button" onclick="deleteStudentSubmission(${index})" class="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-semibold" title="Delete this submission"><i class="fas fa-trash-alt mr-1"></i>Delete</button></td>
                     </tr>
                 `;
             });
+            updateStudentSubmissionSelectionUI();
         }
 
         function renderTeacherList() {

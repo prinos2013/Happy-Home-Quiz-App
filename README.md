@@ -1,23 +1,30 @@
-# Happy Home Quiz App — CSV Answer-Key Fix
+# Happy Home Quiz App — Submission Management and Empty Template Update
 
-This package contains the corrected GitHub Pages application.
+This package builds on the previously corrected CSV/Excel answer-key importer.
 
-## What was wrong
-The supplied `HappyHome_Quiz_Template_11_Populated.csv` contains complete answer text in the `CorrectAnswer` column (not only A/B/C/D). Some question/option cells also contain commas inside CSV quotes. The old importer split every row at every comma and extracted the first A-D character it found in answer text, which could save the wrong answer key.
+## New changes
 
-## What is fixed
-- CSV parsing now respects quoted commas and quoted cells.
-- Correct-answer text is matched against Option A, B, C, or D and stored as the corresponding letter.
-- Scoring resolves letter, numeric, and full-option-text keys defensively.
-- Re-importing a question set replaces old records with matching class, subject, and question text. This prevents old incorrectly imported duplicates from continuing to appear in student quizzes.
-- The service-worker cache was increased to v4 so deployed clients can move off the older cached app.
+- Teachers can delete an individual student submission only when it belongs to one of their assigned classes.
+- Teachers can select multiple visible submissions and delete them together. The bulk action rechecks the assigned-class permissions before removing anything.
+- Administrators can view and delete submissions from all classes, individually or in bulk.
+- Deletions are saved to the app's ATTEMPTS table and passed through the existing `SYNC_TABLE` cloud-sync path. When offline, the existing pending-sync mechanism queues the table update for the next connection.
+- The downloadable import template now contains only the column headings. No sample classes, subjects, questions, options, answer keys, or timer values are prefilled.
+- The service-worker cache name has been increased to v5 so deployed devices fetch the updated app files.
 
-## GitHub Pages update
+## Empty CSV template columns
+
+`Class,Subject,Question,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,TimerMinutes`
+
+Teachers and administrators fill in their own rows beneath these headings. For `CorrectAnswer`, either the A/B/C/D key or the full text of the matching option is accepted by the corrected importer.
+
+## Updating GitHub Pages
+
 1. Extract this ZIP.
-2. Upload/replace all files in the repository root: `index.html`, `sw.js`, `manifest.json`, `logo.png`, `icon-192.png`, and `icon-512.png`.
-3. Commit the changes and wait for the GitHub Pages deployment to finish.
-4. Open the deployed site in a normal browser tab, not only the installed app, and refresh it once.
-5. Sign in to the Teacher Portal and upload the same populated CSV again. The importer now replaces matching old question records instead of adding duplicate copies.
-6. Ask a student to open a fresh quiz and answer a few questions whose correct options are known.
+2. Replace the repository-root `index.html`, `sw.js`, and `manifest.json` with the files in this package.
+3. Upload/replace `logo.png`, `icon-192.png`, and `icon-512.png` in the repository root.
+4. Commit the changes and wait for GitHub Pages to deploy.
+5. Open the website in a browser and refresh it. If an installed PWA still shows the old screen, close and reopen it after the service worker updates.
 
-The current importer's spreadsheet support uses SheetJS from its CDN for `.xlsx`/`.xls`; CSV import works directly in the browser.
+## Notes on submission deletion
+
+The app deletes records from its stored `ATTEMPTS` table and syncs that updated table using the existing cloud-sync endpoint. The separate append-only Google Sheets history created by the `APPEND_RESULT` action is controlled by the Google Apps Script; this package does not modify that script or guarantee removal of already-appended sheet rows.
