@@ -72,20 +72,20 @@
         const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v18',
-            TEACHERS: 'happyhome_quiz_teachers_v18',
-            QUESTIONS: 'happyhome_quiz_questions_v18',
-            ATTEMPTS: 'happyhome_quiz_attempts_v18',
-            CURRENT_USER: 'happyhome_quiz_current_user_v18',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v18',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v18'
+            SETTINGS: 'happyhome_quiz_settings_v19',
+            TEACHERS: 'happyhome_quiz_teachers_v19',
+            QUESTIONS: 'happyhome_quiz_questions_v19',
+            ATTEMPTS: 'happyhome_quiz_attempts_v19',
+            CURRENT_USER: 'happyhome_quiz_current_user_v19',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v19',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v19'
         };
 
         const TABLE_KEY_MAP = {
             SETTINGS: DB_KEYS.SETTINGS,
             TEACHERS: DB_KEYS.TEACHERS,
             QUESTIONS: DB_KEYS.QUESTIONS,
-            ATTEMPTS: DB_KEYS.ATTEMPTS
+            ATTEMPTS: DB_KEYS.ATTEMPTS 
         };
 
         const HAPPY_CLASSES = ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6', 'JHS 1', 'JHS 2', 'JHS 3'];
@@ -320,22 +320,21 @@
                         <div class="flex items-center space-x-3">
                             ${renderLogoHTML('w-10 h-10', 'text-lg')}
                             <div>
-                                <h1 class="font-bold text-sm sm:text-base leading-tight">HAPPY HOME Prep. School, Assin Amoabin</h1>
-                                <p class="text-[11px] text-purple-200 italic">Motto: ${s.motto}</p>
+                                <h1 class="font-bold text-sm sm:text-base leading-tight">HAPPY HOME PREPARATORY SCHOOL</h1>
+                                <p class="text-[11px] text-purple-200 italic">Assin Amoabin</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
                             <button id="installAppBtn" onclick="installPWA()" class="hidden px-3 py-1.5 text-xs sm:text-sm bg-yellow-400 text-yellow-900 font-bold rounded shadow transition hover:bg-yellow-300">
                                 <i class="fas fa-download mr-1"></i> Install App
                             </button>
-                            <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Student Portal</button>
-                            <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Teacher/Admin</button>
+                            <button onclick="renderApp('student')" class="px-3 py-1.5 text-xs sm:text-sm bg-white text-primary font-semibold rounded shadow transition">Student Portal</button>
+                            <button onclick="renderApp('teacher')" class="px-3 py-1.5 text-xs sm:text-sm bg-purple-800 text-white font-medium rounded hover:bg-purple-700 transition">Teacher/Admin</button>
                         </div>
                     </div>
                 </header>
 
                 <main class="max-w-4xl w-full mx-auto p-4 flex-grow my-4">
-                    <!-- Login Form -->
                     <div id="studentLoginForm" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-lg mx-auto">
                         <h2 class="text-xl font-bold text-primary mb-1">Student Examination Portal</h2>
                         <p class="text-xs text-gray-500 mb-6">Select your class and subject to begin your quiz.</p>
@@ -362,7 +361,6 @@
                         </form>
                     </div>
 
-                    <!-- Exam Interface -->
                     <div id="examInterface" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-center border-b pb-4 mb-4">
                             <div>
@@ -376,7 +374,6 @@
                         
                         <div id="questionContainer" class="space-y-6"></div>
                         
-                        <!-- Actions -->
                         <div class="mt-8 flex justify-end">
                             <button id="nativeSubmitBtn" onclick="submitStudentExam()" class="px-6 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">Submit & Release Results</button>
                             <button id="gformSubmitBtn" onclick="finishGoogleFormExam()" class="hidden px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-lg animate-pulse"><i class="fas fa-check-double mr-1"></i> I have submitted on Google Forms -> Finish Exam</button>
@@ -386,15 +383,14 @@
                     <!-- Native Result Display -->
                     <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-4 relative overflow-hidden">
                         <div>
-                            <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">${s.schoolName}</h2>
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">${s.location}</h3>
+                            <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">HAPPY HOME PREPARATORY SCHOOL</h2>
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Assin Amoabin</h3>
                             
-                            <h4 class="text-base sm:text-lg font-bold font-serif mb-2 tracking-widest uppercase">Assessment Report</h4>
+                            <h4 class="text-lg sm:text-xl font-bold font-serif mb-2 tracking-widest uppercase">Assessment Report</h4>
                             
-                            <!-- Enlarged Student Name styled identically to Assessment Report size and weight -->
-                            <div id="certStudentName" class="text-4xl font-black text-slate-900 mt-2 mb-3">Student Name</div>
+                            <h3 id="certStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-2">Student Name</h3>
                             
-                            <div class="flex items-center justify-center space-x-2 text-lg sm:text-xl font-medium text-slate-800">
+                            <div class="flex items-center justify-center space-x-2 text-lg sm:text-xl font-medium text-slate-800 mt-1">
                                 <span id="certStudentClass">Class()</span>
                                 <span>-</span>
                                 <span id="certSubject">Subject()</span>
@@ -402,8 +398,7 @@
                         </div>
                         
                         <div class="pt-6 border-t border-purple-100">
-                            <!-- Removed 80-100% ranges, just plain feedback styled like header -->
-                            <h2 id="certRemarkTitle" class="text-4xl font-black text-red-600 uppercase font-serif tracking-wide mb-2">Excellent</h2>
+                            <h2 id="certRemarkTitle" class="text-4xl sm:text-5xl font-black text-red-600 uppercase font-serif tracking-wide mb-2">Excellent</h2>
                             <p id="certFeedbackDesc" class="text-sm sm:text-base text-gray-700 mt-2 font-medium">
                                 Exceptional understanding demonstrated across all tasks.
                             </p>
@@ -422,14 +417,14 @@
                     <!-- Google Form Result Display -->
                     <div id="gformResultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-blue-200 text-center max-w-xl mx-auto space-y-4 relative overflow-hidden">
                         <div>
-                            <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">${s.schoolName}</h2>
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">${s.location}</h3>
+                            <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">HAPPY HOME PREPARATORY SCHOOL</h2>
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Assin Amoabin</h3>
                             
-                            <h4 class="text-base sm:text-lg font-bold font-serif mb-2 tracking-widest uppercase">Assessment Report</h4>
+                            <h4 class="text-lg sm:text-xl font-bold font-serif mb-2 tracking-widest uppercase">Assessment Report</h4>
                             
-                            <div id="gfCertStudentName" class="text-4xl font-black text-slate-900 mt-2 mb-3">Student Name</div>
+                            <h3 id="gfCertStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-2">Student Name</h3>
                             
-                            <div class="flex items-center justify-center space-x-2 text-lg sm:text-xl font-medium text-slate-800">
+                            <div class="flex items-center justify-center space-x-2 text-lg sm:text-xl font-medium text-slate-800 mt-1">
                                 <span id="gfCertStudentClass">Class</span><span>-</span><span id="gfCertSubject">Subject</span>
                             </div>
                         </div>
@@ -451,6 +446,11 @@
             `;
         }
 
+        // Global function attached directly to the global window scope to fix the onchange scoring bug
+        window.recordAnswer = function(questionId, value) {
+            activeQuizState.answers[questionId] = value;
+        };
+
         function attachStudentPortalListeners() {
             document.getElementById('startTestForm').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -460,13 +460,12 @@
 
                 const allQuestions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
                 
-                // Check if there is an embedded Google Form for this class/subject
                 let gFormEntry = allQuestions.find(q => q.type === 'google_form' && q.class === sClass && q.subject === subject);
 
                 if (gFormEntry) {
                     activeQuizState.isGoogleForm = true;
                     activeQuizState.formUrl = gFormEntry.url;
-                    activeQuizState.questions = [gFormEntry]; // Just for timer reference
+                    activeQuizState.questions = [gFormEntry]; 
                 } else {
                     activeQuizState.isGoogleForm = false;
                     let matchingQuestions = allQuestions.filter(q => q.type !== 'google_form' && q.class === sClass && q.subject === subject);
@@ -474,7 +473,6 @@
                         alert(`No questions available for ${sClass} - ${subject}. Please ask your teacher to add questions to the question bank.`);
                         return;
                     }
-                    // Shuffle and pick exactly 10 questions max
                     matchingQuestions.sort(() => Math.random() - 0.5);
                     activeQuizState.questions = matchingQuestions.slice(0, 10);
                 }
@@ -544,10 +542,10 @@
                     <div class="p-4 bg-gray-50 rounded-lg border space-y-3">
                         <p class="font-semibold text-gray-800">Q${index + 1}. ${q.text}</p>
                         <div class="space-y-2 pl-2">
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A" onchange="activeQuizState.answers['${q.id}']='A'"> <span>A) ${q.optA}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B" onchange="activeQuizState.answers['${q.id}']='B'"> <span>B) ${q.optB}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C" onchange="activeQuizState.answers['${q.id}']='C'"> <span>C) ${q.optC}</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D" onchange="activeQuizState.answers['${q.id}']='D'"> <span>D) ${q.optD}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="A" onchange="window.recordAnswer('${q.id}', 'A')"> <span>A) ${q.optA}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="B" onchange="window.recordAnswer('${q.id}', 'B')"> <span>B) ${q.optB}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="C" onchange="window.recordAnswer('${q.id}', 'C')"> <span>C) ${q.optC}</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer"><input type="radio" name="q_${q.id}" value="D" onchange="window.recordAnswer('${q.id}', 'D')"> <span>D) ${q.optD}</span></label>
                         </div>
                     </div>
                 `;
@@ -595,7 +593,6 @@
 
             let percentage = Math.round((score / total) * 100);
             
-            // Clean remarks without percentages
             let remark = "";
             let feedbackDesc = "";
             
@@ -642,6 +639,7 @@
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             attempts.unshift(submissionData);
             saveTableAndSync('ATTEMPTS', attempts);
+            
             dispatchSubmissionToSheet(submissionData);
         }
 
@@ -702,8 +700,8 @@
                         <div class="flex items-center space-x-3">
                             ${renderLogoHTML('w-10 h-10', 'text-lg')}
                             <div>
-                                <h1 class="font-bold text-sm sm:text-base leading-tight">HAPPY HOME Prep. School, Assin Amoabin</h1>
-                                <p class="text-[11px] text-purple-200 italic">Motto: ${s.motto}</p>
+                                <h1 class="font-bold text-sm sm:text-base leading-tight">${s.schoolName}</h1>
+                                <p class="text-[11px] text-purple-200 italic">${s.location}</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -1083,7 +1081,6 @@
                         timer: parseInt(document.getElementById('gTimer').value) || 10
                     };
                     const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
-                    // Remove existing form for this class subject to prevent dupes
                     const filtered = questions.filter(q => !(q.type === 'google_form' && q.class === newQ.class && q.subject === newQ.subject));
                     filtered.push(newQ);
                     saveTableAndSync('QUESTIONS', filtered);
