@@ -47,6 +47,20 @@
         </div>
     </div>
 
+    <!-- Custom Modal Container -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
+            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
+            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-grow flex flex-col">
         <!-- Dynamic views injected here -->
@@ -72,13 +86,13 @@
         const DEFAULT_CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwiN5ysn2COuVwAQ5ceZC0HopSHqbKnSrqMn_XQtFxasvlN9naEr4lp7U-aFNHcV3ardA/exec"; 
 
         const DB_KEYS = {
-            SETTINGS: 'happyhome_quiz_settings_v14',
-            TEACHERS: 'happyhome_quiz_teachers_v14',
-            QUESTIONS: 'happyhome_quiz_questions_v14',
-            ATTEMPTS: 'happyhome_quiz_attempts_v14',
-            CURRENT_USER: 'happyhome_quiz_current_user_v14',
-            CLOUD_URL: 'happyhome_quiz_cloud_url_v14',
-            PENDING_SYNC: 'happyhome_quiz_pending_sync_v14'
+            SETTINGS: 'happyhome_quiz_settings_v15',
+            TEACHERS: 'happyhome_quiz_teachers_v15',
+            QUESTIONS: 'happyhome_quiz_questions_v15',
+            ATTEMPTS: 'happyhome_quiz_attempts_v15',
+            CURRENT_USER: 'happyhome_quiz_current_user_v15',
+            CLOUD_URL: 'happyhome_quiz_cloud_url_v15',
+            PENDING_SYNC: 'happyhome_quiz_pending_sync_v15'
         };
 
         const TABLE_KEY_MAP = {
@@ -379,8 +393,14 @@
                         <div>
                             <h4 class="text-xs font-black uppercase tracking-widest text-purple-700">${s.schoolName}, ${s.location}</h4>
                             <p class="text-[10px] text-gray-400 italic">Motto: ${s.motto}</p>
+                            
                             <h2 class="text-2xl font-black text-slate-900 mt-3 font-serif">ASSESSMENT REPORT</h2>
-                            <p class="text-xs text-gray-500 mt-1">Candidate: <b id="certStudentName" class="text-primary underline">Student Name</b> (<span id="certStudentClass">Basic 6</span>)</p>
+                            <p class="text-xs text-gray-500 mt-4 uppercase tracking-widest">Candidate:</p>
+                            
+                            <!-- Enlarged Student Name -->
+                            <h3 id="certStudentName" class="text-2xl font-black text-primary underline my-1">Student Name</h3>
+                            
+                            <p class="text-xs text-gray-600">Class: <b id="certStudentClass">Basic 6</b></p>
                             <p class="text-xs text-gray-600 mt-0.5">Subject: <b id="certSubject">Mathematics</b></p>
                         </div>
                         
@@ -982,7 +1002,7 @@
 
             renderQuestionList();
             renderTeacherList();
-            renderTeacherResults(); // Populate results table
+            renderTeacherResults(); 
         }
 
         function handleTeacherLogout() {
@@ -1132,14 +1152,12 @@
             renderQuestionList();
         }
 
-        // Feature: Render Teacher Submissions List
         function renderTeacherResults() {
             const container = document.getElementById('teacherResultsTableBody');
             if (!container) return;
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             const currentUser = getCurrentUser();
             
-            // Filter by assigned classes unless they are an admin
             let filteredAttempts = attempts;
             if (currentUser && currentUser.role !== 'admin' && !currentUser.assignedClasses.includes('All Classes')) {
                 filteredAttempts = attempts.filter(a => currentUser.assignedClasses.includes(a.class));
