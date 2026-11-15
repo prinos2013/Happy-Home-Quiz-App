@@ -1558,33 +1558,109 @@
                 container.innerHTML = `<p class="text-xs text-gray-400">No questions available.</p>`;
                 return;
             }
-            questions.forEach(q => {
-                if (q.type === 'google_form') {
-                    container.innerHTML += `
-                        <div class="flex justify-between items-center p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                            <div><b class="text-blue-900">[${q.class} - ${q.subject}]</b> Google Form Embedded (${q.timer} mins)</div>
-                            <button onclick="deleteQuestion('${q.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Delete</button>
+
+            container.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-100 border rounded">
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                        <input id="selectAllQuestions" type="checkbox" onchange="toggleAllQuestions(this.checked)" class="w-4 h-4 accent-purple-700">
+                        Select All Questions
+                    </label>
+                    <button id="deleteSelectedQuestionsBtn" type="button" onclick="deleteSelectedQuestions()" disabled
+                        class="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete Selected (0)
+                    </button>
+                </div>
+            `;
+
+            questions.forEach((q, index) => {
+                const description = q.type === 'google_form'
+                    ? `<b class="text-blue-900">[${q.class} - ${q.subject}]</b> Google Form Embedded (${q.timer} mins)`
+                    : `<b>[${q.class} - ${q.subject}]</b> ${String(q.text || '').substring(0, 50)}... (Correct: ${q.correct || '—'})`;
+                const rowClass = q.type === 'google_form'
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-gray-50 border';
+                container.innerHTML += `
+                    <div class="flex justify-between items-center gap-2 p-2 ${rowClass} rounded text-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <input type="checkbox" class="question-select-checkbox w-4 h-4 accent-purple-700 shrink-0"
+                                value="${index}" aria-label="Select question ${index + 1}" onchange="updateQuestionSelectionUI()">
+                            <div class="min-w-0">${description}</div>
                         </div>
-                    `;
-                } else {
-                    container.innerHTML += `
-                        <div class="flex justify-between items-center p-2 bg-gray-50 border rounded text-xs">
-                            <div><b>[${q.class} - ${q.subject}]</b> ${q.text.substring(0, 50)}... (Correct: ${q.correct})</div>
-                            <button onclick="deleteQuestion('${q.id}')" class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded">Delete</button>
-                        </div>
-                    `;
-                }
+                        <button type="button" onclick="deleteQuestion('${String(q.id).replace(/'/g, "\\\\'")}')"
+                            class="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded shrink-0">Delete</button>
+                    </div>
+                `;
             });
+            updateQuestionSelectionUI();
+        }
+
+        function updateQuestionSelectionUI() {
+            const checkboxes = Array.from(document.querySelectorAll('.question-select-checkbox'));
+            const selectedCount = checkboxes.filter(input => input.checked).length;
+            const deleteButton = document.getElementById('deleteSelectedQuestionsBtn');
+            const selectAll = document.getElementById('selectAllQuestions');
+            if (deleteButton) {
+                deleteButton.disabled = selectedCount === 0;
+                deleteButton.innerHTML = `<i class="fas fa-trash-alt mr-1"></i> Delete Selected (${selectedCount})`;
+            }
+            if (selectAll) {
+                selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+                selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+            }
+        }
+
+        function toggleAllQuestions(checked) {
+            document.querySelectorAll('.question-select-checkbox').forEach(input => {
+                input.checked = !!checked;
+            });
+            updateQuestionSelectionUI();
         }
 
         function deleteQuestion(id) {
-            // Added confirmation check here as requested
-            if (!confirm("Are you sure you want to delete this question?")) return;
-            let questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
-            questions = questions.filter(q => q.id !== id);
-            saveTableAndSync('QUESTIONS', questions);
+            const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+            const question = questions.find(q => String(q.id) === String(id));
+            if (!question) {
+                showToast('Question Not Found', 'Refresh the question bank and try again.', true);
+                renderQuestionList();
+                return;
+            }
+            const description = question.type === 'google_form'
+                ? `${question.class || ''} - ${question.subject || ''} Google Form`
+                : `"${String(question.text || 'Untitled question').substring(0, 100)}"`;
+            if (!confirm(`Are you sure you want to delete this question?\n\n${description}\n\nThis action cannot be undone.`)) return;
+
+            const updatedQuestions = questions.filter(q => String(q.id) !== String(id));
+            saveTableAndSync('QUESTIONS', updatedQuestions);
             renderQuestionList();
-            showToast("Success", "Question deleted successfully.");
+            showToast('Question Deleted', 'The question has been removed from the question bank.');
+        }
+
+        function deleteSelectedQuestions() {
+            const selectedInputs = Array.from(document.querySelectorAll('.question-select-checkbox:checked'));
+            const selectedIndices = [...new Set(selectedInputs.map(input => Number(input.value)))];
+            if (selectedIndices.length === 0) {
+                showToast('Nothing Selected', 'Select at least one question to delete.', true);
+                return;
+            }
+
+            const questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
+            const validIndices = selectedIndices.filter(index =>
+                Number.isInteger(index) && index >= 0 && index < questions.length
+            );
+            if (validIndices.length !== selectedIndices.length) {
+                showToast('Question List Changed', 'Refresh the question bank and select the questions again.', true);
+                renderQuestionList();
+                return;
+            }
+
+            const count = validIndices.length;
+            if (!confirm(`Are you sure you want to delete ${count} selected question${count === 1 ? '' : 's'}?\n\nThis action cannot be undone.`)) return;
+
+            const indicesToDelete = new Set(validIndices);
+            const remainingQuestions = questions.filter((question, index) => !indicesToDelete.has(index));
+            saveTableAndSync('QUESTIONS', remainingQuestions);
+            renderQuestionList();
+            showToast('Questions Deleted', `${count} question${count === 1 ? '' : 's'} removed from the question bank.`);
         }
 
         function canManageStudentSubmission(user, attempt) {
