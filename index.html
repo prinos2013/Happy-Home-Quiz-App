@@ -174,66 +174,87 @@
             }
         }
 
+        function getPendingSyncQueue() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(DB_KEYS.PENDING_SYNC) || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (e) { return {}; }
+        }
+
         async function saveTableAndSync(tableName, dataObj) {
             const storageKey = TABLE_KEY_MAP[tableName];
-            if (!storageKey) return;
-            localStorage.setItem(storageKey, JSON.stringify(dataObj));
+            if (!storageKey) return false;
+            let previousData = [];
+            try { previousData = JSON.parse(localStorage.getItem(storageKey) || '[]'); }
+            catch (e) { previousData = []; }
 
-            const url = getCloudSyncUrl();
-            if (!url) {
-                setCloudBadgeStatus('local', 'Offline Mode');
-                return;
-            }
+            const previousById = new Map((Array.isArray(previousData) ? previousData : [])
+                .filter(item => item && item.id !== undefined && item.id !== null)
+                .map(item => [String(item.id), item]));
+            const currentIds = new Set((Array.isArray(dataObj) ? dataObj : [])
+                .filter(item => item && item.id !== undefined && item.id !== null)
+                .map(item => String(item.id)));
+            const deletedIds = [...previousById.keys()].filter(id => !currentIds.has(id));
+
+            localStorage.setItem(storageKey, JSON.stringify(dataObj));
+            const queue = getPendingSyncQueue();
+            const earlierDeletedIds = queue[tableName] && Array.isArray(queue[tableName].deletedIds)
+                ? queue[tableName].deletedIds.map(String) : [];
+            const allDeletedIds = [...new Set(earlierDeletedIds.concat(deletedIds.map(String)))];
+            queue[tableName] = { records: dataObj, deletedIds: allDeletedIds };
+            localStorage.setItem(DB_KEYS.PENDING_SYNC, JSON.stringify(queue));
 
             if (!navigator.onLine) {
-                localStorage.setItem(DB_KEYS.PENDING_SYNC, 'true');
-                setCloudBadgeStatus('pending', 'Saved Locally (Offline Queue)');
-                return;
+                setCloudBadgeStatus('pending', 'Saved Locally (Waiting for Internet)');
+                return false;
             }
+            return await flushPendingTable(tableName);
+        }
 
-            setCloudBadgeStatus('syncing', 'Saving to Cloud...');
+        async function flushPendingTable(tableName) {
+            const queue = getPendingSyncQueue();
+            const pending = queue[tableName];
+            if (!pending) return true;
+            const url = getCloudSyncUrl();
+            if (!url || !navigator.onLine) {
+                setCloudBadgeStatus('pending', 'Saved Locally (Sync Pending)');
+                return false;
+            }
+            setCloudBadgeStatus('syncing', 'Synchronising ' + tableName + '...');
             try {
                 await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors',
+                    method: 'POST', mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'SYNC_TABLE', table: tableName, records: dataObj })
+                    body: JSON.stringify({ action: 'SYNC_TABLE', table: tableName,
+                        records: pending.records, deletedIds: pending.deletedIds || [] })
                 });
-                localStorage.removeItem(DB_KEYS.PENDING_SYNC);
-                setCloudBadgeStatus('synced', 'Cloud Synced');
+                // no-cors is opaque: request sent does not prove server-side success.
+                delete queue[tableName];
+                if (Object.keys(queue).length) {
+                    localStorage.setItem(DB_KEYS.PENDING_SYNC, JSON.stringify(queue));
+                    setCloudBadgeStatus('pending', 'Some Changes Still Pending');
+                } else {
+                    localStorage.removeItem(DB_KEYS.PENDING_SYNC);
+                    setCloudBadgeStatus('synced', 'Sync Request Sent');
+                }
+                return true;
             } catch (err) {
-                localStorage.setItem(DB_KEYS.PENDING_SYNC, 'true');
                 setCloudBadgeStatus('pending', 'Sync Retry Queued');
+                return false;
             }
         }
 
-        async function pushAllTablesToCloud(showNotification = true) {
-            const url = getCloudSyncUrl();
-            if (!url) {
-                if (showNotification) showToast('Cloud URL Missing', 'Please paste your Google Apps Script Web App URL first.', true);
-                return;
-            }
-            setCloudBadgeStatus('syncing', 'Pushing All Data...');
-            const payloadData = {};
-            Object.keys(TABLE_KEY_MAP).forEach(tableName => {
-                const raw = localStorage.getItem(TABLE_KEY_MAP[tableName]);
-                payloadData[tableName] = raw ? JSON.parse(raw) : null;
-            });
+        async function flushPendingSyncQueue() {
+            if (!navigator.onLine) return;
+            const queue = getPendingSyncQueue();
+            for (const tableName of Object.keys(queue)) await flushPendingTable(tableName);
+        }
 
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'SYNC_ALL', data: payloadData })
-                });
-                localStorage.removeItem(DB_KEYS.PENDING_SYNC);
-                setCloudBadgeStatus('synced', 'All Data Pushed');
-                if (showNotification) showToast('Cloud Push Complete', 'Data synchronized.');
-            } catch (err) {
-                setCloudBadgeStatus('pending', 'Push Failed');
-                if (showNotification) showToast('Cloud Push Error', 'Could not reach Google Sheets. Check connection.', true);
-            }
+        async function pushAllTablesToCloud(showNotification = true) {
+            // Full-device uploads are disabled because they can reintroduce stale data.
+            if (showNotification) showToast('Bulk Upload Disabled',
+                'For data safety, use normal save actions. The app synchronises individual tables using cloud-side merging.', true);
+            return false;
         }
 
         async function pullFromCloud(showNotification = false) {
@@ -242,14 +263,16 @@
                 setCloudBadgeStatus(url ? 'pending' : 'local', 'Offline Mode');
                 return false;
             }
-
             setCloudBadgeStatus('syncing', 'Fetching Cloud Updates...');
             try {
                 const res = await fetch(url + '?t=' + Date.now());
                 const json = await res.json();
                 if (json && json.status === 'success' && json.data) {
+                    const pendingQueue = getPendingSyncQueue();
                     let updatedAny = false;
                     Object.keys(TABLE_KEY_MAP).forEach(tableName => {
+                        // Preserve local edits that have not yet been sent to the cloud.
+                        if (pendingQueue[tableName]) return;
                         const cloudVal = json.data[tableName];
                         if (cloudVal !== null && cloudVal !== undefined) {
                             if (tableName === 'SETTINGS') {
@@ -260,14 +283,13 @@
                             updatedAny = true;
                         }
                     });
-                    setCloudBadgeStatus('synced', 'Cloud Synced');
-                    if (showNotification) showToast('Cloud Synced!', 'Latest records loaded successfully.');
+                    setCloudBadgeStatus(Object.keys(pendingQueue).length ? 'pending' : 'synced',
+                        Object.keys(pendingQueue).length ? 'Local Changes Awaiting Sync' : 'Cloud Data Loaded');
+                    if (showNotification) showToast('Cloud Sync', 'Cloud data loaded without replacing pending local changes.');
                     if (updatedAny) renderApp();
                     return true;
                 }
-            } catch (err) {
-                setCloudBadgeStatus('pending', 'Offline Mode');
-            }
+            } catch (err) { setCloudBadgeStatus('pending', 'Cloud Fetch Failed'); }
             return false;
         }
 
@@ -307,7 +329,7 @@
             document.getElementById('network-badge').className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800";
             document.getElementById('network-badge').innerHTML = `<span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online Mode`;
             syncOfflineSubmissions();
-            if (localStorage.getItem(DB_KEYS.PENDING_SYNC) === 'true' && getCloudSyncUrl()) pushAllTablesToCloud(false);
+            flushPendingSyncQueue();
         });
 
         window.addEventListener('offline', () => {
@@ -1829,7 +1851,7 @@
             initDatabase();
             renderApp();
             if (getCloudSyncUrl()) {
-                pullFromCloud(false);
+                pullFromCloud(false).then(() => flushPendingSyncQueue());
             }
         };
     </script>
