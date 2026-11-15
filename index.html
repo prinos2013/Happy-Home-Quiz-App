@@ -48,6 +48,20 @@
         </div>
     </div>
 
+    <!-- Custom Modal Container -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-fade-in">
+            <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Modal Title</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 text-sm text-slate-600 space-y-4 max-h-[75vh] overflow-y-auto"></div>
+            <div id="modal-footer" class="px-6 py-3 bg-slate-50 border-t flex justify-end space-x-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-grow flex flex-col">
         <!-- Dynamic views injected here -->
@@ -105,7 +119,6 @@
 
         const generateID = () => 'Q_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-        // Structured rows are retained after reading .xlsx/.xls files so commas and cell boundaries stay intact.
         let uploadedSpreadsheetRows = null;
         let uploadedSpreadsheetPreviewText = '';
 
@@ -260,7 +273,7 @@
 
         function initDatabase() {
             if (!localStorage.getItem(DB_KEYS.SETTINGS)) {
-                localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify({ schoolName: 'HAPPY HOME PREPARATORY SCHOOL', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' }));
+                localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify({ schoolName: 'HAPPY HOME Preparatory School', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' }));
             }
             if (!localStorage.getItem(DB_KEYS.TEACHERS)) localStorage.setItem(DB_KEYS.TEACHERS, JSON.stringify([]));
             if (!localStorage.getItem(DB_KEYS.QUESTIONS)) localStorage.setItem(DB_KEYS.QUESTIONS, JSON.stringify([]));
@@ -269,7 +282,7 @@
 
         function getSettings() {
             const raw = localStorage.getItem(DB_KEYS.SETTINGS);
-            return raw ? JSON.parse(raw) : { schoolName: 'HAPPY HOME PREPARATORY SCHOOL', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' };
+            return raw ? JSON.parse(raw) : { schoolName: 'HAPPY HOME Preparatory School', location: 'Assin Amoabin', motto: 'Perseverance Endures', cloudSyncUrl: DEFAULT_CLOUD_SYNC_URL, adminPasscode: 'admin123' };
         }
 
         function renderLogoHTML(sizeClasses = 'w-10 h-10', iconTextSize = 'text-lg') {
@@ -384,17 +397,13 @@
                         </div>
                     </div>
 
-                    <!-- Native Result Display (Formatted to Match Image Request) -->
+                    <!-- Native Result Display -->
                     <div id="resultInterface" class="hidden bg-white p-8 rounded-2xl shadow-lg border-4 border-purple-200 text-center max-w-xl mx-auto space-y-4 relative overflow-hidden">
-                        
                         <div>
                             <h2 class="text-xl sm:text-2xl font-black text-primary uppercase mb-1">${s.schoolName}</h2>
-                            <h3 class="text-lg font-bold text-slate-900 mb-6">${s.location}</h3>
+                            <h3 class="text-lg font-bold text-slate-800 mb-6">${s.location}</h3>
                             
-                            <!-- Scaled Down Assessment Report Title -->
                             <h4 class="text-lg font-bold font-serif mb-3 tracking-widest uppercase text-slate-900">Assessment Report</h4>
-                            
-                            <!-- Enlarged Student Name matching Remark Size -->
                             <h3 id="certStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-3">Student Name</h3>
                             
                             <div class="flex items-center justify-center space-x-4 text-lg sm:text-xl font-medium text-slate-800">
@@ -432,7 +441,6 @@
                             <h3 class="text-lg font-bold text-slate-900 mb-6">${s.location}</h3>
                             
                             <h4 class="text-lg font-bold font-serif mb-3 tracking-widest uppercase text-slate-900">Assessment Report</h4>
-                            
                             <h3 id="gfCertStudentName" class="text-4xl sm:text-5xl font-black text-slate-900 mt-2 mb-3">Student Name</h3>
                             
                             <div class="flex items-center justify-center space-x-4 text-lg sm:text-xl font-medium text-slate-800">
@@ -544,7 +552,6 @@
             document.getElementById('gformSubmitBtn').classList.add('hidden');
 
             activeQuizState.questions.forEach((q, index) => {
-                // Generate secure radio buttons
                 container.innerHTML += `
                     <div class="p-4 bg-gray-50 rounded-lg border space-y-3">
                         <p class="font-semibold text-gray-800">Q${index + 1}. ${q.text}</p>
@@ -587,19 +594,59 @@
             dispatchSubmissionToSheet(submissionData);
         }
 
-        // --- FOOLPROOF SCORING FIX IMPLEMENTED HERE ---
+        function normalizeAnswerText(value) {
+            return String(value == null ? '' : value)
+                .trim()
+                .toLowerCase()
+                .replace(/^[a-d]\s*[).:\-]\s*/, '')
+                .replace(/\s+/g, ' ')
+                .replace(/[.!?]+$/, '');
+        }
+
+        function normalizeCorrectAnswer(value, questionOrOptions) {
+            const raw = String(value == null ? '' : value).trim();
+            if (!raw) return null;
+
+            const options = Array.isArray(questionOrOptions)
+                ? questionOrOptions
+                : [
+                    questionOrOptions && questionOrOptions.optA,
+                    questionOrOptions && questionOrOptions.optB,
+                    questionOrOptions && questionOrOptions.optC,
+                    questionOrOptions && questionOrOptions.optD
+                ];
+
+            let match = raw.match(/^(?:OPTION|CHOICE)\s*([A-D])\b/i);
+            if (match) return match[1].toUpperCase();
+
+            match = raw.match(/^[\(\[]([A-D])[\)\]]$/i);
+            if (match) return match[1].toUpperCase();
+
+            match = raw.match(/^([A-D])\s*(?:[).:\-]|$)/i);
+            if (match) return match[1].toUpperCase();
+
+            match = raw.match(/\b(?:CORRECT\s+ANSWER|ANSWER|OPTION|CHOICE)\s*(?:IS\s*)?[:=\-]?\s*([A-D])\b/i);
+            if (match) return match[1].toUpperCase();
+
+            const answerText = normalizeAnswerText(raw);
+            for (let i = 0; i < 4; i++) {
+                const optionText = normalizeAnswerText(options[i]);
+                if (optionText && answerText === optionText) return 'ABCD'[i];
+            }
+
+            if (/^[1-4]$/.test(raw)) return 'ABCD'[Number(raw) - 1];
+            return null;
+        }
+
         function submitStudentExam() {
             if (activeQuizState.timerInterval) clearInterval(activeQuizState.timerInterval);
             let score = 0;
             let total = activeQuizState.questions.length;
 
             activeQuizState.questions.forEach(q => {
-                // Directly fetch the selected radio button from the screen
                 const selectedOption = document.querySelector(`input[name="q_${q.id}"]:checked`);
                 const studentAnswer = selectedOption ? selectedOption.value : null;
                 
-                // Imported workbooks may store the key as A-D, 1-4, or the full
-                // option text. Resolve it against this question's actual options.
                 const correctAnswer = normalizeCorrectAnswer(
                     q.correct ?? q.correctAnswer ?? q.answer ?? q.answerKey,
                     q
@@ -1029,7 +1076,6 @@
         }
 
         function downloadExcelTemplate() {
-            // Header-only template: teachers enter their own classes, subjects, questions and answers.
             const headers = [
                 'Class', 'Subject', 'Question', 'OptionA', 'OptionB',
                 'OptionC', 'OptionD', 'CorrectAnswer', 'TimerMinutes'
@@ -1226,12 +1272,127 @@
             if (targetBtn) targetBtn.className = "px-3 py-2 text-xs sm:text-sm font-semibold bg-primary text-white rounded-lg transition";
         }
 
-        // Normalize spreadsheet headings so different Excel template labels are accepted.
-        function normalizeHeaderKey(value) {
-            return String(value == null ? '' : value).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        function findHeaderIndex(headers, aliases, fallbackIndex) {
+            for (const alias of aliases) {
+                const index = headers.indexOf(alias);
+                if (index >= 0) return index;
+            }
+            const extendedIndex = headers.findIndex(header => aliases.some(alias => alias.length >= 4 && header.startsWith(alias)));
+            return extendedIndex >= 0 ? extendedIndex : fallbackIndex;
         }
 
-        // Parse CSV/TSV safely, including quoted cells that contain commas or line breaks.
+        function getSpreadsheetColumnMap(headerRow) {
+            const headers = headerRow.map(h => String(h == null ? '' : h).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+            const hasQuestionHeader = headers.some(h => ['question', 'questions', 'questiontext', 'item', 'itemtext'].includes(h));
+            if (!hasQuestionHeader) {
+                return {
+                    hasHeader: false,
+                    classIndex: 0, subjectIndex: 1, questionIndex: 2,
+                    optionAIndex: 3, optionBIndex: 4, optionCIndex: 5, optionDIndex: 6,
+                    correctIndex: 7, timerIndex: 8
+                };
+            }
+
+            return {
+                hasHeader: true,
+                classIndex: findHeaderIndex(headers, ['class', 'classname', 'targetclass', 'classgroup', 'grade', 'level'], -1),
+                subjectIndex: findHeaderIndex(headers, ['subject', 'subjectname'], -1),
+                questionIndex: findHeaderIndex(headers, ['question', 'questions', 'questiontext', 'item', 'itemtext'], -1),
+                optionAIndex: findHeaderIndex(headers, ['optiona', 'choicea', 'answera', 'option1', 'choice1', 'a'], -1),
+                optionBIndex: findHeaderIndex(headers, ['optionb', 'choiceb', 'answerb', 'option2', 'choice2', 'b'], -1),
+                optionCIndex: findHeaderIndex(headers, ['optionc', 'choicec', 'answerc', 'option3', 'choice3', 'c'], -1),
+                optionDIndex: findHeaderIndex(headers, ['optiond', 'choiced', 'answerd', 'option4', 'choice4', 'd'], -1),
+                correctIndex: findHeaderIndex(headers, ['correctanswer', 'answerkey', 'correctoption', 'correct', 'answer', 'key'], -1),
+                timerIndex: findHeaderIndex(headers, ['timerminutes', 'timer', 'duration', 'timelimit'], -1)
+            };
+        }
+
+        function makeQuestionFromSpreadsheetRow(row, columnMap, rowNumber) {
+            const cell = index => index >= 0 && index < row.length ? String(row[index] == null ? '' : row[index]).trim() : '';
+            const fallbackClass = document.getElementById('qClass').value;
+            const fallbackSubject = document.getElementById('qSubject').value;
+            const options = [
+                cell(columnMap.optionAIndex), cell(columnMap.optionBIndex),
+                cell(columnMap.optionCIndex), cell(columnMap.optionDIndex)
+            ];
+            const questionText = cell(columnMap.questionIndex);
+            const correctValue = cell(columnMap.correctIndex);
+            
+            const rawCorrectMatch = String(correctValue).trim().toUpperCase().replace(/[^A-D]/g, '').charAt(0);
+            const correctLetter = rawCorrectMatch || 'A'; 
+
+            if (!questionText || options.some(option => !option)) {
+                return {
+                    question: null,
+                    reason: !questionText ? 'question text missing' : 'one or more options missing'
+                };
+            }
+
+            const timerValue = parseInt(cell(columnMap.timerIndex), 10);
+            return {
+                question: {
+                    id: generateID(),
+                    class: cell(columnMap.classIndex) || fallbackClass,
+                    subject: cell(columnMap.subjectIndex) || fallbackSubject,
+                    text: questionText,
+                    optA: options[0], optB: options[1], optC: options[2], optD: options[3],
+                    correct: correctLetter,
+                    timer: Number.isFinite(timerValue) && timerValue > 0
+                        ? timerValue
+                        : (parseInt(document.getElementById('testTimerMinutes').value, 10) || 10)
+                },
+                reason: null
+            };
+        }
+
+        function handleAiDocumentUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const extension = file.name.split('.').pop().toLowerCase();
+            const textarea = document.getElementById('ai-raw-text');
+            const reader = new FileReader();
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                if (typeof XLSX === 'undefined') {
+                    alert('The Excel reader could not load. Connect to the Internet, refresh the app, and try again.');
+                    event.target.value = '';
+                    return;
+                }
+
+                reader.onload = function(e) {
+                    try {
+                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        if (!firstSheetName) throw new Error('The workbook has no worksheets.');
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        uploadedSpreadsheetRows = XLSX.utils.sheet_to_json(worksheet, {
+                            header: 1, defval: '', raw: false, blankrows: false
+                        });
+                        uploadedSpreadsheetPreviewText = XLSX.utils.sheet_to_csv(worksheet);
+                        textarea.value = uploadedSpreadsheetPreviewText;
+                        alert(`Excel file ${file.name} loaded successfully. Review the preview, then click 'Auto-Generate Questions'.`);
+                    } catch (error) {
+                        uploadedSpreadsheetRows = null;
+                        uploadedSpreadsheetPreviewText = '';
+                        alert(`Could not read this Excel file: ${error.message || error}`);
+                    }
+                };
+                reader.onerror = () => alert('The selected Excel file could not be read. Please try saving it again.');
+                reader.readAsArrayBuffer(file);
+                return;
+            }
+
+            uploadedSpreadsheetRows = null;
+            uploadedSpreadsheetPreviewText = '';
+            reader.onload = function(e) {
+                textarea.value = e.target.result;
+                alert(`File ${file.name} loaded successfully. Click 'Auto-Generate Questions'.`);
+            };
+            reader.onerror = () => alert('The selected file could not be read.');
+            reader.readAsText(file, 'UTF-8');
+        }
+
         function parseDelimitedRows(sourceText) {
             const text = String(sourceText || '').replace(/^\uFEFF/, '');
             const firstLine = text.split(/\r?\n/, 1)[0] || '';
@@ -1274,172 +1435,6 @@
             return rows;
         }
 
-        function normalizeAnswerText(value) {
-            return String(value == null ? '' : value)
-                .trim()
-                .toLowerCase()
-                .replace(/^[a-d]\s*[).:\-]\s*/, '')
-                .replace(/\s+/g, ' ')
-                .replace(/[.!?]+$/, '');
-        }
-
-        // Convert answer keys such as B, Option B, 2, or the full option text into A-D.
-        function normalizeCorrectAnswer(value, questionOrOptions) {
-            const raw = String(value == null ? '' : value).trim();
-            if (!raw) return null;
-
-            const options = Array.isArray(questionOrOptions)
-                ? questionOrOptions
-                : [
-                    questionOrOptions && questionOrOptions.optA,
-                    questionOrOptions && questionOrOptions.optB,
-                    questionOrOptions && questionOrOptions.optC,
-                    questionOrOptions && questionOrOptions.optD
-                ];
-
-            let match = raw.match(/^(?:OPTION|CHOICE)\s*([A-D])\b/i);
-            if (match) return match[1].toUpperCase();
-
-            match = raw.match(/^[\(\[]([A-D])[\)\]]$/i);
-            if (match) return match[1].toUpperCase();
-
-            match = raw.match(/^([A-D])\s*(?:[).:\-]|$)/i);
-            if (match) return match[1].toUpperCase();
-
-            match = raw.match(/\b(?:CORRECT\s+ANSWER|ANSWER|OPTION|CHOICE)\s*(?:IS\s*)?[:=\-]?\s*([A-D])\b/i);
-            if (match) return match[1].toUpperCase();
-
-            const answerText = normalizeAnswerText(raw);
-            for (let i = 0; i < 4; i++) {
-                const optionText = normalizeAnswerText(options[i]);
-                if (optionText && answerText === optionText) return 'ABCD'[i];
-            }
-
-            if (/^[1-4]$/.test(raw)) return 'ABCD'[Number(raw) - 1];
-            return null;
-        }
-
-        function findHeaderIndex(headers, aliases, fallbackIndex) {
-            for (const alias of aliases) {
-                const index = headers.indexOf(alias);
-                if (index >= 0) return index;
-            }
-            const extendedIndex = headers.findIndex(header => aliases.some(alias => alias.length >= 4 && header.startsWith(alias)));
-            return extendedIndex >= 0 ? extendedIndex : fallbackIndex;
-        }
-
-        function getSpreadsheetColumnMap(headerRow) {
-            const headers = headerRow.map(normalizeHeaderKey);
-            const hasQuestionHeader = headers.some(h => ['question', 'questions', 'questiontext', 'item', 'itemtext'].includes(h));
-            if (!hasQuestionHeader) {
-                return {
-                    hasHeader: false,
-                    classIndex: 0, subjectIndex: 1, questionIndex: 2,
-                    optionAIndex: 3, optionBIndex: 4, optionCIndex: 5, optionDIndex: 6,
-                    correctIndex: 7, timerIndex: 8
-                };
-            }
-
-            return {
-                hasHeader: true,
-                classIndex: findHeaderIndex(headers, ['class', 'classname', 'targetclass', 'classgroup', 'grade', 'level'], -1),
-                subjectIndex: findHeaderIndex(headers, ['subject', 'subjectname'], -1),
-                questionIndex: findHeaderIndex(headers, ['question', 'questions', 'questiontext', 'item', 'itemtext'], -1),
-                optionAIndex: findHeaderIndex(headers, ['optiona', 'choicea', 'answera', 'option1', 'choice1', 'a'], -1),
-                optionBIndex: findHeaderIndex(headers, ['optionb', 'choiceb', 'answerb', 'option2', 'choice2', 'b'], -1),
-                optionCIndex: findHeaderIndex(headers, ['optionc', 'choicec', 'answerc', 'option3', 'choice3', 'c'], -1),
-                optionDIndex: findHeaderIndex(headers, ['optiond', 'choiced', 'answerd', 'option4', 'choice4', 'd'], -1),
-                correctIndex: findHeaderIndex(headers, ['correctanswer', 'answerkey', 'correctoption', 'correct', 'answer', 'key'], -1),
-                timerIndex: findHeaderIndex(headers, ['timerminutes', 'timer', 'duration', 'timelimit'], -1)
-            };
-        }
-
-        function makeQuestionFromSpreadsheetRow(row, columnMap, rowNumber) {
-            const cell = index => index >= 0 && index < row.length ? String(row[index] == null ? '' : row[index]).trim() : '';
-            const fallbackClass = document.getElementById('qClass').value;
-            const fallbackSubject = document.getElementById('qSubject').value;
-            const options = [
-                cell(columnMap.optionAIndex), cell(columnMap.optionBIndex),
-                cell(columnMap.optionCIndex), cell(columnMap.optionDIndex)
-            ];
-            const questionText = cell(columnMap.questionIndex);
-            const correctValue = cell(columnMap.correctIndex);
-            const correctLetter = normalizeCorrectAnswer(correctValue, options);
-
-            if (!questionText || options.some(option => !option) || !correctLetter) {
-                return {
-                    question: null,
-                    reason: !questionText ? 'question text missing' : options.some(option => !option) ? 'one or more options missing' : `unrecognized correct answer "${correctValue}"`
-                };
-            }
-
-            const timerValue = parseInt(cell(columnMap.timerIndex), 10);
-            return {
-                question: {
-                    id: generateID(),
-                    class: cell(columnMap.classIndex) || fallbackClass,
-                    subject: cell(columnMap.subjectIndex) || fallbackSubject,
-                    text: questionText,
-                    optA: options[0], optB: options[1], optC: options[2], optD: options[3],
-                    correct: correctLetter,
-                    timer: Number.isFinite(timerValue) && timerValue > 0
-                        ? timerValue
-                        : (parseInt(document.getElementById('testTimerMinutes').value, 10) || 10)
-                },
-                reason: null
-            };
-        }
-
-        function handleAiDocumentUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-
-            const extension = file.name.split('.').pop().toLowerCase();
-            const textarea = document.getElementById('ai-raw-text');
-            const reader = new FileReader();
-
-            if (extension === 'xlsx' || extension === 'xls') {
-                if (typeof XLSX === 'undefined') {
-                    alert('The Excel reader could not load. Connect to the Internet, refresh the app, and try again. You can also save the workbook as CSV and upload the CSV file.');
-                    event.target.value = '';
-                    return;
-                }
-
-                reader.onload = function(e) {
-                    try {
-                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                        const firstSheetName = workbook.SheetNames[0];
-                        if (!firstSheetName) throw new Error('The workbook has no worksheets.');
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        uploadedSpreadsheetRows = XLSX.utils.sheet_to_json(worksheet, {
-                            header: 1, defval: '', raw: false, blankrows: false
-                        });
-                        uploadedSpreadsheetPreviewText = XLSX.utils.sheet_to_csv(worksheet);
-                        textarea.value = uploadedSpreadsheetPreviewText;
-                        alert(`Excel file ${file.name} loaded successfully. Review the preview, then click 'Auto-Generate Questions'.`);
-                    } catch (error) {
-                        uploadedSpreadsheetRows = null;
-                        uploadedSpreadsheetPreviewText = '';
-                        alert(`Could not read this Excel file: ${error.message || error}`);
-                    }
-                };
-                reader.onerror = () => alert('The selected Excel file could not be read. Please try saving it again.');
-                reader.readAsArrayBuffer(file);
-                return;
-            }
-
-            uploadedSpreadsheetRows = null;
-            uploadedSpreadsheetPreviewText = '';
-            reader.onload = function(e) {
-                textarea.value = e.target.result;
-                alert(`File ${file.name} loaded successfully. Click 'Auto-Generate Questions'.`);
-            };
-            reader.onerror = () => alert('The selected file could not be read.');
-            reader.readAsText(file, 'UTF-8');
-        }
-
-        // Stable identity for imported questions. Re-importing a corrected workbook
-        // replaces old copies instead of leaving stale, incorrectly keyed duplicates.
         function questionBankIdentity(question) {
             if (!question || question.type === 'google_form') return '';
             const clean = value => String(value == null ? '' : value).trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1485,7 +1480,6 @@
                     }
                 });
             } else {
-                // Retain support for the simple numbered-question text format.
                 const lines = rawText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
                 let currentQuestion = '';
                 let currentOptions = [];
@@ -1494,7 +1488,7 @@
                 const saveCurrentTextQuestion = () => {
                     if (!currentQuestion || currentOptions.length < 2) return;
                     const options = [currentOptions[0], currentOptions[1], currentOptions[2] || 'Option C', currentOptions[3] || 'Option D'];
-                    const normalized = normalizeCorrectAnswer(correctOption, options) || 'A';
+                    const normalized = String(correctOption).trim().toUpperCase().replace(/[^A-D]/g, '').charAt(0) || 'A';
                     importedQuestions.push({
                         id: generateID(),
                         class: document.getElementById('qClass').value,
@@ -1539,9 +1533,6 @@
                 return;
             }
 
-            // Replace previously imported copies with the corrected question records.
-            // This repairs banks created by the old importer, which truncated answer text
-            // and split quoted CSV cells incorrectly.
             const importedIdentities = new Set(importedQuestions.map(questionBankIdentity).filter(Boolean));
             const retainedQuestions = existingQuestions.filter(question => {
                 const identity = questionBankIdentity(question);
@@ -1554,7 +1545,6 @@
             const reasonMessage = skipReasons.length ? `\n${skipReasons.join('\n')}` : '';
             alert(`Importer successfully added ${parsedCount} question(s) to the question bank.${skippedMessage}${reasonMessage}`);
 
-            // Clear only the structured workbook cache; the preview stays available for review.
             uploadedSpreadsheetRows = null;
             uploadedSpreadsheetPreviewText = '';
         }
@@ -1588,10 +1578,13 @@
         }
 
         function deleteQuestion(id) {
+            // Added confirmation check here as requested
+            if (!confirm("Are you sure you want to delete this question?")) return;
             let questions = JSON.parse(localStorage.getItem(DB_KEYS.QUESTIONS) || '[]');
             questions = questions.filter(q => q.id !== id);
             saveTableAndSync('QUESTIONS', questions);
             renderQuestionList();
+            showToast("Success", "Question deleted successfully.");
         }
 
         function canManageStudentSubmission(user, attempt) {
@@ -1685,7 +1678,6 @@
             const attempts = JSON.parse(localStorage.getItem(DB_KEYS.ATTEMPTS) || '[]');
             const currentUser = getCurrentUser();
 
-            // Keep the original array index so deletion targets the exact stored record.
             const visibleAttempts = attempts
                 .map((attempt, index) => ({ attempt, index }))
                 .filter(item => canManageStudentSubmission(currentUser, item.attempt));
