@@ -215,31 +215,88 @@
             const queue = getPendingSyncQueue();
             const pending = queue[tableName];
             if (!pending) return true;
+
             const url = getCloudSyncUrl();
             if (!url || !navigator.onLine) {
                 setCloudBadgeStatus('pending', 'Saved Locally (Sync Pending)');
                 return false;
             }
-            setCloudBadgeStatus('syncing', 'Synchronising ' + tableName + '...');
+
+            setCloudBadgeStatus('syncing', 'Uploading ' + tableName + '...');
             try {
-                await fetch(url, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'SYNC_TABLE', table: tableName,
-                        records: pending.records, deletedIds: pending.deletedIds || [] })
-                });
-                // no-cors is opaque: request sent does not prove server-side success.
-                delete queue[tableName];
-                if (Object.keys(queue).length) {
-                    localStorage.setItem(DB_KEYS.PENDING_SYNC, JSON.stringify(queue));
-                    setCloudBadgeStatus('pending', 'Some Changes Still Pending');
-                } else {
-                    localStorage.removeItem(DB_KEYS.PENDING_SYNC);
-                    setCloudBadgeStatus('synced', 'Sync Request Sent');
+                const records = pending.records;
+                const deletedIds = Array.isArray(pending.deletedIds) ? pending.deletedIds : [];
+                const isArrayTable = Array.isArray(records);
+                const batchSize = tableName === 'QUESTIONS' ? 40 : 100;
+                const batches = isArrayTable
+                    ? (records.length ? Array.from({ length: Math.ceil(records.length / batchSize) },
+                        (_, i) => records.slice(i * batchSize, (i + 1) * batchSize)) : [[]])
+                    : [records];
+
+                // Send smaller sequential requests so large Excel/CSV imports
+                // do not depend on one very large Apps Script POST.
+                for (let i = 0; i < batches.length; i++) {
+                    await fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: 'SYNC_TABLE',
+                            table: tableName,
+                            records: batches[i],
+                            deletedIds: i === 0 ? deletedIds : []
+                        })
+                    });
                 }
+
+                // A no-cors POST has an opaque response. Confirm the records
+                // by reading the cloud database before clearing the retry queue.
+                setCloudBadgeStatus('syncing', 'Verifying ' + tableName + '...');
+                const verifyResponse = await fetch(url + '?verify=' + Date.now(), {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                if (!verifyResponse.ok) throw new Error('Cloud verification request failed.');
+                const verifyJson = await verifyResponse.json();
+                if (!verifyJson || verifyJson.status !== 'success' || !verifyJson.data) {
+                    throw new Error('Cloud verification returned an invalid response.');
+                }
+
+                const cloudRecords = verifyJson.data[tableName];
+                let verified = false;
+                if (tableName === 'SETTINGS') {
+                    verified = !!cloudRecords && typeof cloudRecords === 'object';
+                } else if (Array.isArray(records)) {
+                    const cloudIds = new Set((Array.isArray(cloudRecords) ? cloudRecords : [])
+                        .filter(item => item && item.id !== undefined && item.id !== null)
+                        .map(item => String(item.id)));
+                    const expectedIds = records
+                        .filter(item => item && item.id !== undefined && item.id !== null)
+                        .map(item => String(item.id));
+                    verified = expectedIds.every(id => cloudIds.has(id));
+                }
+
+                if (!verified) throw new Error('Some records were not found in the cloud after upload.');
+
+                // Remove only the queue entry that was actually verified.
+                const latestQueue = getPendingSyncQueue();
+                if (latestQueue[tableName]) {
+                    delete latestQueue[tableName];
+                    if (Object.keys(latestQueue).length) {
+                        localStorage.setItem(DB_KEYS.PENDING_SYNC, JSON.stringify(latestQueue));
+                    } else {
+                        localStorage.removeItem(DB_KEYS.PENDING_SYNC);
+                    }
+                }
+
+                setCloudBadgeStatus('synced', tableName + ' Verified in Cloud');
+                // Pull the merged cloud copy so this device also receives
+                // records added by other teachers/devices.
+                await pullFromCloud(false);
                 return true;
             } catch (err) {
-                setCloudBadgeStatus('pending', 'Sync Retry Queued');
+                console.error('Happy Home cloud sync failed for ' + tableName + ':', err);
+                setCloudBadgeStatus('pending', 'Cloud Sync Not Verified - Retry Pending');
                 return false;
             }
         }
@@ -1467,7 +1524,7 @@
             ]);
         }
 
-        function parseTextIntoQuestions() {
+        async function parseTextIntoQuestions() {
             const rawText = document.getElementById('ai-raw-text').value.trim();
             if (!rawText) {
                 alert('Please paste text, CSV, or upload an Excel workbook first.');
@@ -1561,11 +1618,14 @@
                 return !identity || !importedIdentities.has(identity);
             });
             const mergedQuestions = retainedQuestions.concat(importedQuestions);
-            saveTableAndSync('QUESTIONS', mergedQuestions);
+            const cloudVerified = await saveTableAndSync('QUESTIONS', mergedQuestions);
             renderQuestionList();
             const skippedMessage = skippedCount ? ` ${skippedCount} incomplete/invalid row(s) were skipped.` : '';
             const reasonMessage = skipReasons.length ? `\n${skipReasons.join('\n')}` : '';
-            alert(`Importer successfully added ${parsedCount} question(s) to the question bank.${skippedMessage}${reasonMessage}`);
+            const syncMessage = cloudVerified
+                ? ' The questions were verified in the shared cloud question bank.'
+                : ' They are saved on this device, but cloud synchronisation could not be verified. The app will keep them queued for retry.';
+            alert(`Importer processed ${parsedCount} question(s).${syncMessage}${skippedMessage}${reasonMessage}`);
 
             uploadedSpreadsheetRows = null;
             uploadedSpreadsheetPreviewText = '';
